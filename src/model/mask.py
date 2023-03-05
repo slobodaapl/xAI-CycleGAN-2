@@ -6,20 +6,7 @@ from skimage.morphology import disk
 from skimage.color import rgb2gray
 from typing import Literal
 from enum import Enum
-
-
-def get_mask(image, mask_type: Literal['binary_rec', 'entropy', 'noise'], options: dict = None):
-    """
-    This function returns a mask of the specified type.
-    :param image: The image to create the mask for.
-    :param mask_type: The type of mask to create, e.g. binary_rec, entropy, noise.
-    :param options: Settings for the mask type.
-    :return: Returns a mask of the specified type.
-    """
-    if options:
-        return MaskType[mask_type].value(image, **options)
-
-    return MaskType[mask_type].value(image)
+from functools import partial
 
 
 def get_mask_noise(image, mean=1.0, std=0.02):  # A simple noise mask, with mean and std as parameters
@@ -73,6 +60,20 @@ def get_mask_rec_binary(image, ratio=0.9):  # A simple rectangular binary mask, 
 
 
 class MaskType(Enum):
-    binary_rec = get_mask_rec_binary
-    entropy = get_mask_entropy
-    noise = get_mask_noise
+    binary_rec = partial(get_mask_rec_binary)
+    entropy = partial(get_mask_entropy)
+    noise = partial(get_mask_noise)
+
+
+def get_mask(image, mask_type: Literal['binary_rec', 'entropy', 'noise'], options: dict = None):
+    """
+    This function returns a mask of the specified type.
+    :param image: The image to create the mask for.
+    :param mask_type: The type of mask to create, e.g. binary_rec, entropy, noise.
+    :param options: Settings for the mask type.
+    :return: Returns a mask of the specified type.
+    """
+    if options:
+        return MaskType[mask_type].value(image, **options)
+
+    return MaskType[mask_type].value(image)

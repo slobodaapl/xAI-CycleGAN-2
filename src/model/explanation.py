@@ -20,7 +20,7 @@ class ExplanationController:
             discriminator: Callable,
             discriminator_mask: Callable,
             mask_lambda: float = 0.7,
-            ramp='fast_start'
+            ramp="fast_start"
     ):
 
         """

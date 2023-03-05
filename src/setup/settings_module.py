@@ -40,7 +40,7 @@ class Settings:
                     elif value == 'False':
                         value = False
                     else:
-                        value = value.strip('"')
+                        value = value.strip('"').strip("'")
 
                     # check if name has a star on the beginning and if so, save it to self.cfg_dict
                     if name.startswith('*'):

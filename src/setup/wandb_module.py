@@ -3,11 +3,11 @@ import atexit
 import numpy as np
 import wandb
 
-from settings_module import Settings
+from setup.settings_module import Settings
 from setup.logging_utils import RunningMeanStack
 
 # if program crashes or is killed, make sure to save the run
-atexit.register(wandb.finish)
+# atexit.register(wandb.finish)
 
 
 class WandbModule:

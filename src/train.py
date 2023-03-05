@@ -6,19 +6,25 @@ from model.training_controller import TrainingController
 from setup.settings_module import Settings
 from setup.wandb_module import WandbModule
 
-settings = Settings('settings.cfg')
+settings = Settings('src/settings.cfg')
 wandb_module = WandbModule(settings)
 training_controller = TrainingController(settings, wandb_module)
 
 # Directories for loading data and saving results
 data_dir = settings.data_root
+model_dir = settings.model_root
 
-os.mkdir('models') if not os.path.exists('models') else None
-model_dir = os.path.join(os.getcwd(), 'models')
-
-os.mkdir(f'{settings.id}') if not os.path.exists(f'{settings.id}') else None
+os.mkdir(model_dir) if not os.path.exists(model_dir) else None
 model_dir = os.path.join(model_dir, f'{settings.id}')
+os.mkdir(model_dir) if not os.path.exists(model_dir) else None
+
 model_file = os.path.join(model_dir, f'model_checkpoint.pth')
+
+if os.path.exists(model_dir):
+    print("Model directory: ", model_dir)
+    print("Model checkpoint file: ", model_file)
+else:
+    exit(1)
 
 
 for epoch in range(settings.epochs):

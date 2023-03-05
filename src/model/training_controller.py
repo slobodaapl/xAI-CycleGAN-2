@@ -1,5 +1,5 @@
 import itertools
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 
 import torch
 from torch.autograd import Variable
@@ -11,9 +11,8 @@ from model.mask import get_mask
 from model.model import Generator, Discriminator
 from model.utils import LambdaLR, ImagePool
 
-if TYPE_CHECKING:
-    from setup.settings_module import Settings
-    from setup.wandb_module import WandbModule
+from setup.settings_module import Settings
+from setup.wandb_module import WandbModule
 
 
 class TrainingController:
@@ -38,8 +37,8 @@ class TrainingController:
         # endregion
 
         # region Initialize models
-        generator_params = (settings.channels, settings.generator_downconv_filters, settings.num_resnet_blocks)
-        discriminator_params = (settings.channels, settings.discriminator_downconv_filters)
+        generator_params = (settings.generator_downconv_filters, settings.num_resnet_blocks, settings.channels, settings.channels)
+        discriminator_params = (settings.discriminator_downconv_filters, settings.channels)
         self.generator_he_to_p63 = Generator(*generator_params)
         self.generator_p63_to_he = Generator(*generator_params)
         self.discriminator_he = Discriminator(*discriminator_params)
@@ -376,8 +375,8 @@ class TrainingController:
         real_he = self.test_he_data.get_random_image()
         real_p63 = self.test_p63_data.get_random_image()
 
-        real_he = Variable(real_he.to(self.device))
-        real_p63 = Variable(real_p63.to(self.device))
+        real_he = Variable(real_he.to(self.device)).expand(1, -1, -1, -1)
+        real_p63 = Variable(real_p63.to(self.device)).expand(1, -1, -1, -1)
 
         real_he_mask = get_mask(real_he, self.settings.mask_type)
         real_p63_mask = get_mask(real_p63, self.settings.mask_type)

@@ -19,18 +19,17 @@ class DefaultTransform:
         self.transform = None
 
         if self.norm_dict is None:
-            self.init()
-
-    def __call__(self, img):
-        return img
-
-    def init(self):
-
-        if self.norm_dict is None:
             self.norm_dict = {
                 'mean': [0.5, 0.5, 0.5],
                 'std': [0.5, 0.5, 0.5]
             }
+        
+        self.init()
+
+    def __call__(self, img):
+        return self.transform(img)
+
+    def init(self):
 
         self.transform = transforms.Compose([
             transforms.ToTensor(),

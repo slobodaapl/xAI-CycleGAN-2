@@ -70,7 +70,7 @@ class ResnetBlock(torch.nn.Module):
 
 
 class Generator(torch.nn.Module):
-    def __init__(self, input_dim, num_filter, output_dim, num_resnet):
+    def __init__(self, num_filter, num_resnet, input_dim=3, output_dim=3):
         super(Generator, self).__init__()
 
         # Mask encoder
@@ -149,7 +149,7 @@ class Generator(torch.nn.Module):
 
 
 class Discriminator(torch.nn.Module):
-    def __init__(self, input_dim, num_filter, output_dim=1):
+    def __init__(self, num_filter, input_dim=3, output_dim=1):
         super(Discriminator, self).__init__()
 
         conv1 = ConvBlock(input_dim, num_filter, kernel_size=4, stride=2, padding=1, activation='lrelu', batch_norm=False)
