@@ -13,7 +13,7 @@ echo "Using GPU devices: ${DEVICE}"
 
 docker run \
     -it --rm \
-    --name "xaicyclegan-c" \
+    --name "xaicyclegan" \
     --gpus all \
     --privileged \
     --shm-size 8g \
