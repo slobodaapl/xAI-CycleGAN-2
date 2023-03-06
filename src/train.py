@@ -15,7 +15,7 @@ data_dir = settings.data_root
 model_dir = settings.model_root
 
 os.mkdir(model_dir) if not os.path.exists(model_dir) else None
-model_dir = os.path.join(model_dir, f'{settings.id}')
+model_dir = os.path.join(model_dir, f'{settings.name}')
 os.mkdir(model_dir) if not os.path.exists(model_dir) else None
 
 model_file = os.path.join(model_dir, f'model_checkpoint.pth')

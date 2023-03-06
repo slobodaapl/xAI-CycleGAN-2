@@ -1,10 +1,8 @@
-import atexit
-
 import numpy as np
 import wandb
 
 from setup.settings_module import Settings
-from setup.logging_utils import RunningMeanStack
+from setup.logging_utils import RunningMeanStack, to_np, normalize_image
 
 # if program crashes or is killed, make sure to save the run
 # atexit.register(wandb.finish)
@@ -23,7 +21,6 @@ class WandbModule:
             notes=settings.notes,
             resume=settings.resume,
             mode=settings.mode,
-            id=settings.id,
             config=settings.cfg_dict
         )
 
@@ -54,18 +51,24 @@ class WandbModule:
 
     def log_image(self, real_image_pair, gen_image_pair, recon_image_pair):
 
-        real_image_pair = [real_image_pair[0].cpu().detach().numpy(), real_image_pair[1].cpu().detach().numpy()]
-        gen_image_pair = [gen_image_pair[0].cpu().detach().numpy(), gen_image_pair[1].cpu().detach().numpy()]
-        recon_image_pair = [recon_image_pair[0].cpu().detach().numpy(), recon_image_pair[1].cpu().detach().numpy()]
-
-        real_image = np.concatenate((real_image_pair[0], real_image_pair[1]), axis=2)
-        gen_image = np.concatenate((gen_image_pair[0], gen_image_pair[1]), axis=2)
-        recon_image = np.concatenate((recon_image_pair[0], recon_image_pair[1]), axis=2)
-        real_image = np.concatenate((real_image, gen_image), axis=1)
-        real_image = np.concatenate((real_image, recon_image), axis=1)
+        # Concatenate the images horizontally to create rows
+        row_0 = np.concatenate((
+            normalize_image(to_np(real_image_pair[0])),
+            normalize_image(to_np(gen_image_pair[1])),
+            normalize_image(to_np(recon_image_pair[0])),
+        ), axis=1)
+        
+        row_1 = np.concatenate((
+            normalize_image(to_np(real_image_pair[1])),
+            normalize_image(to_np(gen_image_pair[0])),
+            normalize_image(to_np(recon_image_pair[1])),
+        ), axis=1)
+        
+        # Concatenate the rows vertically to create the final image
+        merged_image = np.concatenate((row_0, row_1), axis=0)
 
         self.run.log({
-            "generation_results": real_image,
+            "generation_results": wandb.Image(merged_image, caption="Top row HE->P63, Bottom P63->HE, L to R orig., transf., reconstr."),
         }, step=self.step)
 
     def log_model(self, model_file):

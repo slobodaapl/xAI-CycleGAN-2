@@ -1,4 +1,5 @@
 from torch import Tensor
+from numpy import uint8
 
 
 class RunningMeanStack(list):
@@ -26,4 +27,9 @@ class RunningMeanStack(list):
 
 
 def to_np(x: Tensor):
-    return x.data.cpu().numpy()
+    return x.data.cpu().detach().numpy()
+
+def normalize_image(img):
+    img = img.squeeze()
+    img = (((img - img.min()) * 255) / (img.max() - img.min())).transpose(1, 2, 0).astype(uint8)
+    return img
