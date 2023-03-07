@@ -147,7 +147,7 @@ class Generator(torch.nn.Module):
         dec2 = self.deconv2(dec1 + enc3)
         dec3 = self.deconv3(dec2 + enc2)
         dec4 = self.deconv4(self.pad(dec3 + enc1))
-        out = self.final(self.pad1(dec4 + img))
+        out = self.final(self.pad1(dec4))
 
         if mask is not None:
             # noinspection PyUnboundLocalVariable
