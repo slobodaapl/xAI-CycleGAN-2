@@ -33,7 +33,7 @@ class TrainingController:
             [0, 1, 0],
             [1, -4, 1],
             [0, 1, 0],
-        ], dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+        ], dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(self.device)
 
         # region Initialize data loaders
         self.train_he_data = DatasetFromFolder(settings.data_root, settings.data_train_he, settings.norm_dict)
