@@ -143,11 +143,11 @@ class Generator(torch.nn.Module):
         res = self.resnet_blocks(enc4)
 
         # Decoder
-        dec1 = self.deconv1(res)
-        dec2 = self.deconv2(dec1)
-        dec3 = self.deconv3(dec2)
-        dec4 = self.deconv4(self.pad(dec3))
-        out = self.final(self.pad1(dec4))
+        dec1 = self.deconv1(res + enc4)
+        dec2 = self.deconv2(dec1 + enc3)
+        dec3 = self.deconv3(dec2 + enc2)
+        dec4 = self.deconv4(self.pad(dec3 + enc1))
+        out = self.final(self.pad1(dec4 + img))
 
         if mask is not None:
             # noinspection PyUnboundLocalVariable
