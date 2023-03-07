@@ -1,2 +1,8 @@
 captum
 scikit-image
+kornia
+numpy
+torch
+torchvision
+Pillow
+wandb
