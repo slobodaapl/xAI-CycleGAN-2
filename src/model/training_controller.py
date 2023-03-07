@@ -69,23 +69,26 @@ class TrainingController:
         # endregion
 
         # region Register parameter clipping
+        clip_a = -0.5
+        clip_b = 0.5
+
         for p in self.generator_he_to_p63.parameters():
-            p.register_hook(lambda grad: torch.clamp(grad, -0.1, 0.1))
+            p.register_hook(lambda grad: torch.clamp(grad, clip_a, clip_b))
 
         for p in self.generator_p63_to_he.parameters():
-            p.register_hook(lambda grad: torch.clamp(grad, -0.1, 0.1))
+            p.register_hook(lambda grad: torch.clamp(grad, clip_a, clip_b))
 
         for p in self.discriminator_he.parameters():
-            p.register_hook(lambda grad: torch.clamp(grad, -0.1, 0.1))
+            p.register_hook(lambda grad: torch.clamp(grad, clip_a, clip_b))
 
         for p in self.discriminator_p63.parameters():
-            p.register_hook(lambda grad: torch.clamp(grad, -0.1, 0.1))
+            p.register_hook(lambda grad: torch.clamp(grad, clip_a, clip_b))
 
         for p in self.discriminator_he_mask.parameters():
-            p.register_hook(lambda grad: torch.clamp(grad, -0.1, 0.1))
+            p.register_hook(lambda grad: torch.clamp(grad, clip_a, clip_b))
 
         for p in self.discriminator_p63_mask.parameters():
-            p.register_hook(lambda grad: torch.clamp(grad, -0.1, 0.1))
+            p.register_hook(lambda grad: torch.clamp(grad, clip_a, clip_b))
         # endregion
 
         # region Initialize wandb model watching
