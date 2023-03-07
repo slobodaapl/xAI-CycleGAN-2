@@ -220,120 +220,123 @@ class TrainingController:
         real_p63 = Variable(real_p63.to(self.device))
         mask_he = Variable(mask_he.to(self.device))
         mask_p63 = Variable(mask_p63.to(self.device))
+        
+        with torch.autocast(device_type="cuda"):
+            fake_p63 = self.generator_he_to_p63(real_he, mask_he)
+            fake_he = self.generator_p63_to_he(real_p63, mask_p63)
+            cycled_he = self.generator_p63_to_he(fake_p63, mask_he)
+            cycled_p63 = self.generator_he_to_p63(fake_he, mask_p63)
 
-        fake_p63 = self.generator_he_to_p63(real_he, mask_he)
-        fake_he = self.generator_p63_to_he(real_p63, mask_p63)
-        cycled_he = self.generator_p63_to_he(fake_p63, mask_he)
-        cycled_p63 = self.generator_he_to_p63(fake_he, mask_p63)
+            self.p63_explainer.set_explanation_m(fake_p63 * mask_p63)
+            self.he_explainer.set_explanation_m(fake_he * mask_he)
 
-        self.p63_explainer.set_explanation_m(fake_p63 * mask_p63)
-        self.he_explainer.set_explanation_m(fake_he * mask_he)
+            with torch.no_grad():
+                discriminator_he_mask_loss = \
+                    self.get_total_mask_disc_loss(real_he, mask_he, fake_he, self.discriminator_he_mask) * 0.5
+                discriminator_p63_mask_loss = \
+                    self.get_total_mask_disc_loss(real_p63, mask_p63, fake_p63, self.discriminator_p63_mask) * 0.5
 
-        with torch.no_grad():
-            discriminator_he_mask_loss = \
-                self.get_total_mask_disc_loss(real_he, mask_he, fake_he, self.discriminator_he_mask) * 0.5
-            discriminator_p63_mask_loss = \
-                self.get_total_mask_disc_loss(real_p63, mask_p63, fake_p63, self.discriminator_p63_mask) * 0.5
+                mask_he = mask_he + self.p63_explainer.explanation_mask * self.p63_explainer.get_coefficient_mask(
+                    discriminator_p63_mask_loss)  # maybe mask_he + mask_he * rest
+                mask_p63 = mask_p63 + self.he_explainer.explanation_mask * self.he_explainer.get_coefficient_mask(
+                    discriminator_he_mask_loss)
 
-            mask_he = mask_he + self.p63_explainer.explanation_mask * self.p63_explainer.get_coefficient_mask(
-                discriminator_p63_mask_loss)  # maybe mask_he + mask_he * rest
-            mask_p63 = mask_p63 + self.he_explainer.explanation_mask * self.he_explainer.get_coefficient_mask(
-                discriminator_he_mask_loss)
+            he_mask_inverted = 1 - mask_he
+            p63_mask_inverted = 1 - mask_p63
+            he_mask_inverted = Variable(he_mask_inverted.to(self.device))
+            p63_mask_inverted = Variable(p63_mask_inverted.to(self.device))
 
-        he_mask_inverted = 1 - mask_he
-        p63_mask_inverted = 1 - mask_p63
-        he_mask_inverted = Variable(he_mask_inverted.to(self.device))
-        p63_mask_inverted = Variable(p63_mask_inverted.to(self.device))
+            # Train generator G
+            # A -> B
+            generator_he_to_p63_total_loss = self.get_total_gen_loss_and_prep_explainer(real_he,
+                                                                                        mask_he,
+                                                                                        self.generator_he_to_p63,
+                                                                                        self.discriminator_p63,
+                                                                                        self.p63_explainer)
 
-        # Train generator G
-        # A -> B
-        generator_he_to_p63_total_loss = self.get_total_gen_loss_and_prep_explainer(real_he,
-                                                                                    mask_he,
-                                                                                    self.generator_he_to_p63,
-                                                                                    self.discriminator_p63,
-                                                                                    self.p63_explainer)
+            # forward cycle loss
+            cycle_he_loss_total = self.get_total_cycle_loss(cycled_he, mask_he, he_mask_inverted, real_he)
 
-        # forward cycle loss
-        cycle_he_loss_total = self.get_total_cycle_loss(cycled_he, mask_he, he_mask_inverted, real_he)
+            # B -> A
+            generator_p63_to_he_total_loss = self.get_total_gen_loss_and_prep_explainer(real_p63,
+                                                                                        mask_p63,
+                                                                                        self.generator_p63_to_he,
+                                                                                        self.discriminator_he,
+                                                                                        self.he_explainer)
 
-        # B -> A
-        generator_p63_to_he_total_loss = self.get_total_gen_loss_and_prep_explainer(real_p63,
-                                                                                    mask_p63,
-                                                                                    self.generator_p63_to_he,
-                                                                                    self.discriminator_he,
-                                                                                    self.he_explainer)
+            # backward cycle loss
+            cycle_p63_loss_total = self.get_total_cycle_loss(cycled_p63, mask_p63, p63_mask_inverted, real_p63)
 
-        # backward cycle loss
-        cycle_p63_loss_total = self.get_total_cycle_loss(cycled_p63, mask_p63, p63_mask_inverted, real_p63)
+            # total cycle loss
+            cycle_loss = (cycle_he_loss_total + cycle_p63_loss_total) * self.settings.lambda_cycle
 
-        # total cycle loss
-        cycle_loss = (cycle_he_loss_total + cycle_p63_loss_total) * self.settings.lambda_cycle
+            # identity loss
+            identity_he = self.criterion_pixel_wise(real_he, self.generator_p63_to_he(real_he, mask_he))
+            identity_p63 = self.criterion_pixel_wise(real_p63, self.generator_he_to_p63(real_p63, mask_p63))
+            identity_loss = (identity_he + identity_p63) * self.settings.lambda_identity
 
-        # identity loss
-        identity_he = self.criterion_pixel_wise(real_he, self.generator_p63_to_he(real_he, mask_he))
-        identity_p63 = self.criterion_pixel_wise(real_p63, self.generator_he_to_p63(real_p63, mask_p63))
-        identity_loss = (identity_he + identity_p63) * self.settings.lambda_identity
+            with torch.no_grad():
+                discriminator_he_loss_partial = self.get_partial_disc_loss(real_he, fake_he,
+                                                                           self.discriminator_he,
+                                                                           1 - self.settings.lambda_mask_adversarial_ratio)
 
-        with torch.no_grad():
-            discriminator_he_loss_partial = self.get_partial_disc_loss(real_he, fake_he,
-                                                                       self.discriminator_he,
-                                                                       1 - self.settings.lambda_mask_adversarial_ratio)
+                discriminator_he_loss_mask_partial = self.get_partial_disc_loss(real_he * mask_he, fake_he * mask_he,
+                                                                                self.discriminator_he_mask,
+                                                                                self.settings.lambda_mask_adversarial_ratio)
 
-            discriminator_he_loss_mask_partial = self.get_partial_disc_loss(real_he * mask_he, fake_he * mask_he,
-                                                                            self.discriminator_he_mask,
-                                                                            self.settings.lambda_mask_adversarial_ratio)
+                discriminator_p63_loss_partial = self.get_partial_disc_loss(real_p63, fake_p63,
+                                                                            self.discriminator_p63,
+                                                                            1 - self.settings.lambda_mask_adversarial_ratio)
 
-            discriminator_p63_loss_partial = self.get_partial_disc_loss(real_p63, fake_p63,
-                                                                        self.discriminator_p63,
-                                                                        1 - self.settings.lambda_mask_adversarial_ratio)
+                discriminator_p63_loss_mask_partial = self.get_partial_disc_loss(real_p63 * mask_p63, fake_p63 * mask_p63,
+                                                                                 self.discriminator_p63_mask,
+                                                                                 self.settings.
+                                                                                 lambda_mask_adversarial_ratio)
 
-            discriminator_p63_loss_mask_partial = self.get_partial_disc_loss(real_p63 * mask_p63, fake_p63 * mask_p63,
-                                                                             self.discriminator_p63_mask,
-                                                                             self.settings.
-                                                                             lambda_mask_adversarial_ratio)
+                self.p63_explainer.set_losses(discriminator_he_loss_partial, discriminator_he_loss_mask_partial)
+                self.he_explainer.set_losses(discriminator_p63_loss_partial, discriminator_p63_loss_mask_partial)
+                self.p63_explainer.get_explanation()
+                self.he_explainer.get_explanation()
 
-            self.p63_explainer.set_losses(discriminator_he_loss_partial, discriminator_he_loss_mask_partial)
-            self.he_explainer.set_losses(discriminator_p63_loss_partial, discriminator_p63_loss_mask_partial)
-            self.p63_explainer.get_explanation()
-            self.he_explainer.get_explanation()
-
-        # backward gen
-        generator_loss = \
-            + generator_he_to_p63_total_loss \
-            + generator_p63_to_he_total_loss \
-            + cycle_loss \
-            + identity_loss \
+            # backward gen
+            generator_loss = \
+                + generator_he_to_p63_total_loss \
+                + generator_p63_to_he_total_loss \
+                + cycle_loss \
+                + identity_loss \
 
         self.generator_optimizer.zero_grad()
         generator_loss.backward()
         self.generator_optimizer.step()
 
         # Back propagation
-        discriminator_he_loss_partial = self.get_partial_disc_loss(real_he, fake_he, self.discriminator_he,
-                                                                   1 - self.settings.lambda_mask_adversarial_ratio,
-                                                                   self.fake_he_pool)
+        with torch.autocast(device_type="cuda"):
+            discriminator_he_loss_partial = self.get_partial_disc_loss(real_he, fake_he, self.discriminator_he,
+                                                                       1 - self.settings.lambda_mask_adversarial_ratio,
+                                                                       self.fake_he_pool)
 
-        discriminator_he_loss_mask_partial = self.get_partial_disc_loss(real_he * mask_he, fake_he * mask_he,
-                                                                        self.discriminator_he_mask,
-                                                                        self.settings.lambda_mask_adversarial_ratio,
-                                                                        self.fake_he_pool)
+            discriminator_he_loss_mask_partial = self.get_partial_disc_loss(real_he * mask_he, fake_he * mask_he,
+                                                                            self.discriminator_he_mask,
+                                                                            self.settings.lambda_mask_adversarial_ratio,
+                                                                            self.fake_he_pool)
 
-        discriminator_he_loss = discriminator_he_loss_partial + discriminator_he_loss_mask_partial
+            discriminator_he_loss = discriminator_he_loss_partial + discriminator_he_loss_mask_partial
 
         self.discriminator_he_optimizer.zero_grad()
         discriminator_he_loss.backward()
         self.discriminator_he_optimizer.step()
 
-        discriminator_p63_loss_partial = self.get_partial_disc_loss(real_p63, fake_p63, self.discriminator_p63,
-                                                                    1 - self.settings.lambda_mask_adversarial_ratio,
-                                                                    self.fake_p63_pool)
+        with torch.autocast(device_type="cuda"):
+            discriminator_p63_loss_partial = self.get_partial_disc_loss(real_p63, fake_p63, self.discriminator_p63,
+                                                                        1 - self.settings.lambda_mask_adversarial_ratio,
+                                                                        self.fake_p63_pool)
 
-        discriminator_p63_loss_mask_partial = self.get_partial_disc_loss(real_p63 * mask_p63, fake_p63 * mask_p63,
-                                                                         self.discriminator_p63_mask,
-                                                                         self.settings.lambda_mask_adversarial_ratio,
-                                                                         self.fake_p63_pool)
+            discriminator_p63_loss_mask_partial = self.get_partial_disc_loss(real_p63 * mask_p63, fake_p63 * mask_p63,
+                                                                             self.discriminator_p63_mask,
+                                                                             self.settings.lambda_mask_adversarial_ratio,
+                                                                             self.fake_p63_pool)
 
-        discriminator_p63_loss = discriminator_p63_loss_partial + discriminator_p63_loss_mask_partial
+            discriminator_p63_loss = discriminator_p63_loss_partial + discriminator_p63_loss_mask_partial
 
         self.discriminator_p63_optimizer.zero_grad()
         discriminator_p63_loss.backward()
