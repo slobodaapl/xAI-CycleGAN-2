@@ -2,7 +2,7 @@ import numpy as np
 import wandb
 
 from setup.settings_module import Settings
-from setup.logging_utils import RunningMeanStack, to_np, normalize_image
+from setup.logging_utils import RunningMeanStack, normalize_image
 
 # if program crashes or is killed, make sure to save the run
 # atexit.register(wandb.finish)
@@ -53,15 +53,15 @@ class WandbModule:
 
         # Concatenate the images horizontally to create rows
         row_0 = np.concatenate((
-            normalize_image(to_np(real_image_pair[0])),
-            normalize_image(to_np(gen_image_pair[1])),
-            normalize_image(to_np(recon_image_pair[0])),
+            normalize_image(real_image_pair[0]),
+            normalize_image(gen_image_pair[1]),
+            normalize_image(recon_image_pair[0]),
         ), axis=1)
         
         row_1 = np.concatenate((
-            normalize_image(to_np(real_image_pair[1])),
-            normalize_image(to_np(gen_image_pair[0])),
-            normalize_image(to_np(recon_image_pair[1])),
+            normalize_image(real_image_pair[1]),
+            normalize_image(gen_image_pair[0]),
+            normalize_image(recon_image_pair[1]),
         ), axis=1)
         
         # Concatenate the rows vertically to create the final image

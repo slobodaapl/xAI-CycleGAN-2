@@ -6,9 +6,11 @@ from model.training_controller import TrainingController
 from setup.settings_module import Settings
 from setup.wandb_module import WandbModule
 
+# settings = Settings('settings_test.cfg')
 settings = Settings('src/settings.cfg')
 wandb_module = WandbModule(settings)
 training_controller = TrainingController(settings, wandb_module)
+step_max = min(len(training_controller.train_he), len(training_controller.train_p63))
 
 # Directories for loading data and saving results
 data_dir = settings.data_root
@@ -35,6 +37,15 @@ for epoch in range(settings.epochs):
             wandb_module.log(epoch)
             wandb_module.log_image(*training_controller.get_image_pairs())
             wandb_module.step += 1
+
+            print(f'Epoch: {epoch+1}/{settings.epochs}\n'
+                  f'Step: {step}/{step_max}\n'
+                  f'Generator Loss: {training_controller.latest_generator_loss}\n'
+                  f'Discriminator H&E Loss: {training_controller.latest_discriminator_he_loss}\n'
+                  f'Discriminator P63 Loss: {training_controller.latest_discriminator_p63_loss}\n'
+                  f'Laplace Loss: {training_controller.latest_laplacian_loss}\n'
+                  f'Cycle Loss: {training_controller.latest_cycle_loss}\n'
+                  f'Identity Loss: {training_controller.latest_identity_loss}\n')
 
     training_controller.lr_generator_scheduler.step()
     training_controller.lr_discriminator_he_scheduler.step()
