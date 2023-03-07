@@ -35,7 +35,7 @@ class DeconvBlock(torch.nn.Module):
         self.batch_norm = batch_norm
         self.bn = torch.nn.InstanceNorm2d(output_size)
         self.activation = activation
-        self.relu = torch.nn.ReLU(inplace=True)
+        self.leakyrelu = torch.nn.LeakyReLU(0.2, inplace=True)
 
     def forward(self, x):
         if self.batch_norm:
@@ -43,7 +43,7 @@ class DeconvBlock(torch.nn.Module):
         else:
             out = self.deconv(x)
 
-        return self.relu(out)
+        return self.leakyrelu(out)
 
 
 class ResnetBlock(torch.nn.Module):
@@ -81,6 +81,7 @@ class Generator(torch.nn.Module):
 
         # Reflection padding
         self.pad = torch.nn.ReflectionPad2d(3)
+        self.pad1 = torch.nn.ReflectionPad2d(1)
 
         # Encoder
         self.conv1 = ConvBlock(input_dim, num_filter, kernel_size=7, stride=1, padding=0)
@@ -105,9 +106,10 @@ class Generator(torch.nn.Module):
         num_filter //= 2
         self.deconv3 = DeconvBlock(num_filter, num_filter // 2)
         num_filter //= 2
-        self.deconv4 = ConvBlock(num_filter, output_dim,
-                                 kernel_size=7, stride=1, padding=0, activation='tanh', batch_norm=False)
-
+        self.deconv4 = ConvBlock(num_filter, num_filter, kernel_size=7, stride=1, padding=0)
+        self.final = ConvBlock(num_filter, output_dim, kernel_size=3, stride=1, padding=0,
+                               activation='tanh', batch_norm=False)
+        
     def forward(self, img, mask=None):
         # Mask encoder
         if mask is not None:
@@ -126,10 +128,11 @@ class Generator(torch.nn.Module):
         res = self.resnet_blocks(enc4)
 
         # Decoder
-        dec1 = self.deconv1(res)
-        dec2 = self.deconv2(dec1)
-        dec3 = self.deconv3(dec2)
-        out = self.deconv4(self.pad(dec3))
+        dec1 = self.deconv1(res + enc4)
+        dec2 = self.deconv2(dec1 + enc3)
+        dec3 = self.deconv3(dec2 + enc2)
+        dec4 = self.deconv4(self.pad(dec3 + enc1))
+        out = self.final(self.pad1(dec4))
 
         if mask is not None:
             # noinspection PyUnboundLocalVariable

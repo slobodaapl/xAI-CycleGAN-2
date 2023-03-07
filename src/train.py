@@ -6,16 +6,18 @@ from model.training_controller import TrainingController
 from setup.settings_module import Settings
 from setup.wandb_module import WandbModule
 
+# settings = Settings('settings_test.cfg')
 settings = Settings('src/settings.cfg')
 wandb_module = WandbModule(settings)
 training_controller = TrainingController(settings, wandb_module)
+step_max = min(len(training_controller.train_he), len(training_controller.train_p63))
 
 # Directories for loading data and saving results
 data_dir = settings.data_root
 model_dir = settings.model_root
 
 os.mkdir(model_dir) if not os.path.exists(model_dir) else None
-model_dir = os.path.join(model_dir, f'{settings.id}')
+model_dir = os.path.join(model_dir, f'{settings.name}')
 os.mkdir(model_dir) if not os.path.exists(model_dir) else None
 
 model_file = os.path.join(model_dir, f'model_checkpoint.pth')
@@ -26,7 +28,6 @@ if os.path.exists(model_dir):
 else:
     exit(1)
 
-
 for epoch in range(settings.epochs):
     for step, (real_he, real_p63) in enumerate(zip(training_controller.train_he, training_controller.train_p63)):
         training_controller.training_step(real_he, real_p63)
@@ -36,9 +37,13 @@ for epoch in range(settings.epochs):
             wandb_module.log_image(*training_controller.get_image_pairs())
             wandb_module.step += 1
 
-    training_controller.lr_generator_scheduler.step()
-    training_controller.lr_discriminator_he_scheduler.step()
-    training_controller.lr_discriminator_p63_scheduler.step()
+            print(f'Epoch: {epoch+1}/{settings.epochs}\n'
+                  f'Step: {step}/{step_max}\n'
+                  f'Generator Loss: {training_controller.latest_generator_loss}\n'
+                  f'Discriminator H&E Loss: {training_controller.latest_discriminator_he_loss}\n'
+                  f'Discriminator P63 Loss: {training_controller.latest_discriminator_p63_loss}\n'
+                  f'Cycle Loss: {training_controller.latest_cycle_loss}\n'
+                  f'Identity Loss: {training_controller.latest_identity_loss}\n')
 
     if epoch % settings.checkpoint_frequency_epochs == 0:
         torch.save({

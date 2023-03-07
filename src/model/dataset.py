@@ -1,8 +1,35 @@
 from PIL import Image
 import torch.utils.data as data
 from torchvision import transforms
+import kornia
 import os
 import random
+
+
+class LabNormalize:
+    def __init__(self, l_mean: float = 50, l_std: float = 29.59, ab_mean: float = 0, ab_std: float = 74.04):
+        """
+        :param l_mean: mean value for L channel
+        :param l_std: std value for L channel
+        :param ab_mean: mean value for a,b channel
+        :param ab_std: std value for a,b channel
+        """
+        self.l_mean = l_mean
+        self.l_std = l_std
+        self.ab_mean = ab_mean
+        self.ab_std = ab_std
+
+    def __call__(self, tensor):
+        """
+        :param tensor: Tensor image of size (C, H, W) to be normalized.
+        :return: Normalized Tensor image.
+        """
+
+        tensor[0] = (tensor[0] - self.l_mean) / self.l_std
+        tensor[1] = (tensor[1] - self.ab_mean) / self.ab_std
+        tensor[2] = (tensor[2] - self.ab_mean) / self.ab_std
+
+        return tensor
 
 
 class DefaultTransform:
@@ -11,7 +38,6 @@ class DefaultTransform:
         """
         Serves as the default transform for the dataset, which only
         includes transforms.ToTensor() and transforms.Normalize()
-
         :param norm_dict: dictionary with mean and std values for normalization
         """
 
@@ -33,7 +59,8 @@ class DefaultTransform:
 
         self.transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize(**self.norm_dict)
+            kornia.color.rgb_to_lab,
+            LabNormalize(),
         ])
 
 
