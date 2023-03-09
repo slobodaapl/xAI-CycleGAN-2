@@ -21,6 +21,7 @@ class WandbModule:
             notes=settings.notes,
             resume=settings.resume,
             mode=settings.mode,
+            dir=settings.log_dir,
             config=settings.cfg_dict
         )
 
