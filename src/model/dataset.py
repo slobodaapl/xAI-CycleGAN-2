@@ -2,6 +2,7 @@ from PIL import Image
 import kornia.color
 import torch.utils.data as data
 from torchvision import transforms
+import kornia
 import os
 import random
 
@@ -38,7 +39,6 @@ class DefaultTransform:
         """
         Serves as the default transform for the dataset, which only
         includes transforms.ToTensor() and transforms.Normalize()
-
         :param norm_dict: dictionary with mean and std values for normalization
         """
 

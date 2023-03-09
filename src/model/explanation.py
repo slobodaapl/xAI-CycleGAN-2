@@ -85,4 +85,4 @@ class ExplanationController:
     def explanation_hook(self, module, grad_input, grad_output):
         del module, grad_output
         out = grad_input[0] + grad_input[0] * self.explain_map
-        return out,
+        return out.type(grad_input[0].type()),

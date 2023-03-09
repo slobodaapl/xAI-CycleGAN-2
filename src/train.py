@@ -28,7 +28,6 @@ if os.path.exists(model_dir):
 else:
     exit(1)
 
-
 for epoch in range(settings.epochs):
     for step, (real_he, real_p63) in enumerate(zip(training_controller.train_he, training_controller.train_p63)):
         training_controller.training_step(real_he, real_p63)
@@ -43,13 +42,8 @@ for epoch in range(settings.epochs):
                   f'Generator Loss: {training_controller.latest_generator_loss}\n'
                   f'Discriminator H&E Loss: {training_controller.latest_discriminator_he_loss}\n'
                   f'Discriminator P63 Loss: {training_controller.latest_discriminator_p63_loss}\n'
-                  f'Laplace Loss: {training_controller.latest_laplacian_loss}\n'
                   f'Cycle Loss: {training_controller.latest_cycle_loss}\n'
                   f'Identity Loss: {training_controller.latest_identity_loss}\n')
-
-    training_controller.lr_generator_scheduler.step()
-    training_controller.lr_discriminator_he_scheduler.step()
-    training_controller.lr_discriminator_p63_scheduler.step()
 
     if epoch % settings.checkpoint_frequency_epochs == 0:
         torch.save({
