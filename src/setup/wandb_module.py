@@ -21,6 +21,7 @@ class WandbModule:
             notes=settings.notes,
             resume=settings.resume,
             mode=settings.mode,
+            dir=settings.log_dir,
             config=settings.cfg_dict
         )
 
@@ -46,6 +47,7 @@ class WandbModule:
             "p63_discriminator_loss": self.discriminator_p63_running_loss_avg.mean,
             "he_cycle_loss": self.cycle_he_running_loss_avg.mean,
             "p63_cycle_loss": self.cycle_p63_running_loss_avg.mean,
+            "total_generator_loss": self.total_running_loss_avg.mean,
             "epoch": epoch,
         }, step=self.step)
 

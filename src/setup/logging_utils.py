@@ -1,6 +1,5 @@
 from torch import Tensor
-from kornia.color import lab_to_rgb
-from numpy import uint8
+import kornia
 
 
 class RunningMeanStack(list):
@@ -40,6 +39,6 @@ def normalize_image(img):
     img[0, 1] = img[0, 1].clamp(-128, 127)
     img[0, 2] = img[0, 2].clamp(-128, 127)
 
-    img = lab_to_rgb(img)
+    img = kornia.color.lab_to_rgb(img)
     img = img.squeeze(0).permute(1, 2, 0).numpy()
     return img
