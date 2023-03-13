@@ -4,3 +4,4 @@ debug.py
 __pycache__/
 /src/settings_test.cfg
 /data/
+/.idea/
