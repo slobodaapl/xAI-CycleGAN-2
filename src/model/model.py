@@ -184,7 +184,7 @@ class Discriminator(torch.nn.Module):
         conv4 = ConvBlock(num_filter * 4, num_filter * 8, kernel_size=4, stride=1, padding=1, activation='lrelu')
         conv5 = ConvBlock(num_filter * 8, num_filter * 8, kernel_size=4, stride=1, padding=1, activation='lrelu')
         conv6 = ConvBlock(num_filter * 8, num_filter * 8, kernel_size=4, stride=1, padding=1, activation='lrelu')
-        conv7 = ConvBlock(num_filter * 8, output_dim, kernel_size=4, stride=1, padding=1, activation='no_act',
+        self.conv7 = ConvBlock(num_filter * 8, output_dim, kernel_size=4, stride=1, padding=1, activation='no_act',
                           batch_norm=False)
 
         self.conv_blocks = torch.nn.Sequential(
@@ -192,7 +192,7 @@ class Discriminator(torch.nn.Module):
             conv2,
             conv3,
             conv4,
-            conv7
+            self.conv7
         )
 
     def forward(self, x):
