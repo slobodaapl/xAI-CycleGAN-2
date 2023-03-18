@@ -20,11 +20,6 @@ from setup.wandb_module import WandbModule
 L_RANGE = 1.68976005407
 
 
-def clear_nan_hook(module, grad_i, grad_o):
-    grad_i = torch.nan_to_num(grad_i[0], nan=0.0, posinf=0.0, neginf=0.0)
-    return grad_i,
-
-
 class TrainingController:
 
     def __init__(self, settings: Settings, wandb_module: WandbModule):
@@ -69,15 +64,6 @@ class TrainingController:
         self.discriminator_p63.to(self.device)
         self.discriminator_he_mask.to(self.device)
         self.discriminator_p63_mask.to(self.device)
-        # endregion
-
-        # region Initialize nan_removal_hooks
-        self.generator_he_to_p63.final.register_backward_hook(clear_nan_hook)
-        self.generator_p63_to_he.final.register_backward_hook(clear_nan_hook)
-        self.discriminator_he.conv7.register_backward_hook(clear_nan_hook)
-        self.discriminator_p63.conv7.register_backward_hook(clear_nan_hook)
-        self.discriminator_he_mask.conv7.register_backward_hook(clear_nan_hook)
-        self.discriminator_p63_mask.conv7.register_backward_hook(clear_nan_hook)
         # endregion
 
         # region Initialize wandb model watching
