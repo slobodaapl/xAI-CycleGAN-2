@@ -78,13 +78,17 @@ class Generator(torch.nn.Module):
                                  batch_norm=False)
         self.conv1dm = ConvBlock(input_dim * 2, input_dim, kernel_size=1, stride=1, padding=0, activation='no_act',
                                  batch_norm=False)
+        
+        self.interpretable_conv_1 = ConvBlock(input_dim, num_filter, kernel_size=1, stride=1, padding=0)
+        self.interpretable_conv_2 = ConvBlock(num_filter, num_filter, kernel_size=1, stride=1, padding=0)
+        self.interpretable_conv_3 = ConvBlock(num_filter, num_filter, kernel_size=1, stride=1, padding=0)
 
         # Reflection padding
         self.pad = torch.nn.ReflectionPad2d(3)
         self.pad1 = torch.nn.ReflectionPad2d(1)
 
         # Encoder
-        self.conv1 = ConvBlock(input_dim, num_filter, kernel_size=7, stride=1, padding=0)
+        self.conv1 = ConvBlock(num_filter, num_filter, kernel_size=7, stride=1, padding=0)
         self.conv2 = ConvBlock(num_filter, num_filter * 2)
         num_filter *= 2
         self.conv3 = ConvBlock(num_filter, num_filter * 2)
@@ -118,6 +122,9 @@ class Generator(torch.nn.Module):
 
             img = self.conv1dc(img)
             inv_masked_img = self.conv1dm(inv_masked_img)
+            
+        img = self.interpretable_conv_1(img)
+        img = self.interpretable_conv_3(img)
 
         enc1 = self.conv1(self.pad(img))  # (bs, num_filter, 128, 128)
         enc2 = self.conv2(enc1)  # (bs, num_filter * 2, 64, 64)

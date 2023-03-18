@@ -2,6 +2,7 @@ from PIL import Image
 import kornia.color
 import torch.utils.data as data
 from torchvision import transforms
+import pickle
 import kornia
 import os
 import random
@@ -104,9 +105,22 @@ class DatasetFromFolder(data.Dataset):
             self.transform = DefaultTransform(transform_norm_dict)
 
     def __getitem__(self, index):
-        # Load Image
-        img_fn = os.path.join(self.input_path, self.image_filenames[index])
-        img = Image.open(img_fn).convert('RGB')
+
+        while True:
+            try:
+                img_fn = os.path.join(self.input_path, self.image_filenames[index])
+                img = Image.open(img_fn).convert('RGB')
+            except (OSError, SyntaxError) as e:
+                print(e)
+                print("Deleting it.")
+                os.remove(img_fn)
+                self.image_filenames.pop(index)
+                continue
+            except IndexError:
+                # change index to random one
+                index = random.randint(0, len(self.image_filenames) - 1)
+            else:
+                break
 
         # preprocessing
         if self.resize:

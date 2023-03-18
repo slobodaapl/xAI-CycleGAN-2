@@ -227,8 +227,8 @@ class TrainingController:
             cycled_he = self.generator_p63_to_he(fake_p63, mask_he)
             cycled_p63 = self.generator_he_to_p63(fake_he, mask_p63)
 
-            self.p63_explainer.set_explanation_m(fake_p63 * mask_p63)
-            self.he_explainer.set_explanation_m(fake_he * mask_he)
+            self.p63_explainer.set_explanation_m(fake_p63 * mask_he)
+            self.he_explainer.set_explanation_m(fake_he * mask_p63)
 
             with torch.no_grad():
                 discriminator_he_mask_loss = \
@@ -280,7 +280,7 @@ class TrainingController:
                                                                            self.discriminator_he,
                                                                            1 - self.settings.lambda_mask_adversarial_ratio)
 
-                discriminator_he_loss_mask_partial = self.get_partial_disc_loss(real_he * mask_he, fake_he * mask_he,
+                discriminator_he_loss_mask_partial = self.get_partial_disc_loss(real_he * mask_he, fake_he * mask_p63,
                                                                                 self.discriminator_he_mask,
                                                                                 self.settings.lambda_mask_adversarial_ratio)
 
@@ -288,7 +288,7 @@ class TrainingController:
                                                                             self.discriminator_p63,
                                                                             1 - self.settings.lambda_mask_adversarial_ratio)
 
-                discriminator_p63_loss_mask_partial = self.get_partial_disc_loss(real_p63 * mask_p63, fake_p63 * mask_p63,
+                discriminator_p63_loss_mask_partial = self.get_partial_disc_loss(real_p63 * mask_p63, fake_p63 * mask_he,
                                                                                  self.discriminator_p63_mask,
                                                                                  self.settings.
                                                                                  lambda_mask_adversarial_ratio)
@@ -315,7 +315,7 @@ class TrainingController:
                                                                        1 - self.settings.lambda_mask_adversarial_ratio,
                                                                        self.fake_he_pool)
 
-            discriminator_he_loss_mask_partial = self.get_partial_disc_loss(real_he * mask_he, fake_he * mask_he,
+            discriminator_he_loss_mask_partial = self.get_partial_disc_loss(real_he * mask_he, fake_he * mask_p63,
                                                                             self.discriminator_he_mask,
                                                                             self.settings.lambda_mask_adversarial_ratio,
                                                                             self.fake_he_pool)
@@ -331,7 +331,7 @@ class TrainingController:
                                                                         1 - self.settings.lambda_mask_adversarial_ratio,
                                                                         self.fake_p63_pool)
 
-            discriminator_p63_loss_mask_partial = self.get_partial_disc_loss(real_p63 * mask_p63, fake_p63 * mask_p63,
+            discriminator_p63_loss_mask_partial = self.get_partial_disc_loss(real_p63 * mask_p63, fake_p63 * mask_he,
                                                                              self.discriminator_p63_mask,
                                                                              self.settings.lambda_mask_adversarial_ratio,
                                                                              self.fake_p63_pool)

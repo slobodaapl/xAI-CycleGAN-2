@@ -2,6 +2,56 @@ from torch import Tensor
 import kornia
 
 
+class RunningMeanStackFast(list): # Use only if max_length >= 3000 or .mean often, otherwise use RunningMeanStack cause it's faster.
+
+    def __init__(self, max_length):
+        super().__init__()
+        self.max_length = max_length
+        self.prev_sum = 0
+        self.prev_mean = None
+        self.added = []
+        self.removed = []
+        self.correction = 0
+
+    def append(self, x):
+        super().append(x)
+        self.added.append(x)
+        if len(self) > self.max_length:
+            self.removed.append(self.tail)
+            self.pop(0)
+        else:
+            self.prev_sum = sum(self)
+
+    @property
+    def mean(self):
+        self.correction += 1
+        if len(self) == 0:
+            return 0
+        
+        if self.correction % 50 == 0:
+            self.correction = 0
+            self.prev_mean = sum(self) / len(self)
+            return self.prev_mean
+
+        if len(self.added) != 0 and len(self.removed) != 0:
+            self.prev_sum += sum(self.added) - sum(self.removed)
+            self.prev_mean = self.prev_sum / self.max_length
+        else:
+            self.prev_mean = self.prev_sum / len(self)
+                
+        self.added = []
+        self.removed = []
+        return self.prev_mean
+        
+    @property
+    def head(self):
+        return self[-1]
+
+    @property
+    def tail(self):
+        return self[0]
+
+
 class RunningMeanStack(list):
 
     def __init__(self, max_length):
@@ -15,8 +65,11 @@ class RunningMeanStack(list):
 
     @property
     def mean(self):
-        return sum(self) / len(self)
+        if len(self) == 0:
+            return 0
 
+        return sum(self) / len(self)
+        
     @property
     def head(self):
         return self[-1]

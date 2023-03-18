@@ -5,6 +5,7 @@ import torch
 from model.training_controller import TrainingController
 from setup.settings_module import Settings
 from setup.wandb_module import WandbModule
+from setup.data_controller import HistoDataTracker
 
 # settings = Settings('settings_test.cfg')
 settings = Settings('src/settings.cfg')
@@ -15,7 +16,9 @@ step_max = min(len(training_controller.train_he), len(training_controller.train_
 # Directories for loading data and saving results
 data_dir = settings.data_root
 model_dir = settings.model_root
+log_dir = settings.log_dir
 
+os.mkdir(log_dir) if not os.path.exists(log_dir) else None
 os.mkdir(model_dir) if not os.path.exists(model_dir) else None
 model_dir = os.path.join(model_dir, f'{settings.name}')
 os.mkdir(model_dir) if not os.path.exists(model_dir) else None
@@ -27,18 +30,28 @@ if os.path.exists(model_dir):
     print("Model checkpoint file: ", model_file)
 else:
     exit(1)
+    
+#tracker = HistoDataTracker()
+#data_step = 0
 
 for epoch in range(settings.epochs):
     for step, (real_he, real_p63) in enumerate(zip(training_controller.train_he, training_controller.train_p63)):
+        
+        #if not tracker.check_image(real_p63):
+        #    continue
+        
+        #data_step += 1
         training_controller.training_step(real_he, real_p63)
 
-        if step % settings.log_frequency == 0:
+        if step % settings.log_frequency == 0:  # step to data_step when needed
             wandb_module.log(epoch)
             wandb_module.log_image(*training_controller.get_image_pairs())
             wandb_module.step += 1
 
             print(f'Epoch: {epoch+1}/{settings.epochs}\n'
                   f'Step: {step}/{step_max}\n'
+                  #f'Data Step: {data_step}\n'
+                  #f'Current Class Ratio: {tracker.ratio.mean}\n'
                   f'Generator Loss: {training_controller.latest_generator_loss}\n'
                   f'Discriminator H&E Loss: {training_controller.latest_discriminator_he_loss}\n'
                   f'Discriminator P63 Loss: {training_controller.latest_discriminator_p63_loss}\n'
