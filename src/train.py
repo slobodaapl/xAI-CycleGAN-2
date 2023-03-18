@@ -24,8 +24,6 @@ os.mkdir(model_dir) if not os.path.exists(model_dir) else None
 
 model_file = os.path.join(model_dir, f'model_checkpoint.pth')
 
-wandb_module.set_model(model_file)
-
 if os.path.exists(model_dir):
     print("Model directory: ", model_dir)
     print("Model checkpoint file: ", model_file)
@@ -77,4 +75,4 @@ for epoch in range(settings.epochs):
             'discriminator_p63_loss': training_controller.latest_discriminator_p63_loss,
         }, f=model_file)
 
-        wandb_module.log_model()
+        wandb_module.log_model(model_file)

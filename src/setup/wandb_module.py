@@ -74,9 +74,9 @@ class WandbModule:
             "generation_results": wandb.Image(merged_image, caption="Top row HE->P63, Bottom P63->HE, L to R orig., transf., reconstr."),
         }, step=self.step)
 
-    def log_model(self):
-        self.run.log_artifact(self.model_log)
+    def log_model(self, model_file):
+        if self.model_file is None:
+            self.model_file = model_file
+            self.model_log.add_file(model_file)
 
-    def set_model(self, model_file):
-        self.model_file = model_file
-        self.model_log.add_file(model_file)
+        self.run.log_artifact(self.model_log)
