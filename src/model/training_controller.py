@@ -22,7 +22,7 @@ L_RANGE = 1.68976005407
 
 def clear_nan_hook(module, grad_i, grad_o):
     grad_i = torch.nan_to_num(grad_i[0], nan=0.0, posinf=0.0, neginf=0.0)
-    return module, grad_i, grad_o
+    return grad_i,
 
 
 class TrainingController:
