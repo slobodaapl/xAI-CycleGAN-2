@@ -32,6 +32,7 @@ class TrainingController:
         self.latest_discriminator_p63_loss= None
         self.latest_identity_loss = None
         self.latest_cycle_loss = None
+        self.latest_ssim_loss = None
 
         # region Initialize data loaders
         self.train_he_data = DatasetFromFolder(settings.data_root, settings.data_train_he, settings.norm_dict)
@@ -281,9 +282,16 @@ class TrainingController:
             identity_loss = (identity_he + identity_p63) * self.settings.lambda_identity
 
             # ssim loss
-            ssim_he = ssim(real_he[:, 0:1, :, :] + L_RANGE, fake_he[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
-            ssim_p63 = ssim(real_p63[:, 0:1, :, :] + L_RANGE, fake_p63[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
-            ssim_loss = ((1 - ssim_he) + (1 - ssim_p63)) * self.settings.lambda_ssim * 0.5
+            ssim_he = ssim(real_he[:, 0:1, :, :] + L_RANGE, cycled_he[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
+            ssim_he_fake = ssim(real_he[:, 0:1, :, :] + L_RANGE, fake_p63[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
+            ssim_p63 = ssim(real_p63[:, 0:1, :, :] + L_RANGE, cycled_p63[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
+            ssim_p63_fake = ssim(real_p63[:, 0:1, :, :] + L_RANGE, fake_he[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
+            ssim_loss = (
+                + (1 - ssim_he)
+                + (1 - ssim_p63)
+                + (1 - ssim_he_fake) * 0.75
+                + (1 - ssim_p63_fake) * 0.75
+            ) * self.settings.lambda_ssim * 0.25
 
             with torch.no_grad():
                 discriminator_he_loss_partial = self.get_partial_disc_loss(real_he, fake_he,
@@ -362,6 +370,7 @@ class TrainingController:
         self.latest_discriminator_p63_loss = discriminator_p63_loss.item()
         self.latest_identity_loss = identity_loss.item()
         self.latest_cycle_loss = cycle_loss.item()
+        self.latest_ssim_loss = ssim_loss.item()
 
         self.wandb_module.discriminator_he_running_loss_avg.append(discriminator_he_loss.item())
         self.wandb_module.discriminator_p63_running_loss_avg.append(discriminator_p63_loss.item())
