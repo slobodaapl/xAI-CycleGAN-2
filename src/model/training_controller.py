@@ -20,6 +20,10 @@ from setup.wandb_module import WandbModule
 L_RANGE = 1.68976005407
 
 
+def clear_nan_hook(grad):
+    torch.nan_to_num(grad, nan=0.0, posinf=0.0, neginf=0.0, out=grad)
+
+
 class TrainingController:
 
     def __init__(self, settings: Settings, wandb_module: WandbModule):
@@ -64,6 +68,15 @@ class TrainingController:
         self.discriminator_p63.to(self.device)
         self.discriminator_he_mask.to(self.device)
         self.discriminator_p63_mask.to(self.device)
+        # endregion
+
+        # region Initialize nan_removal_hooks
+        self.generator_he_to_p63.final.register_backward_hook(clear_nan_hook)
+        self.generator_p63_to_he.final.register_backward_hook(clear_nan_hook)
+        self.discriminator_he.final.register_backward_hook(clear_nan_hook)
+        self.discriminator_p63.final.register_backward_hook(clear_nan_hook)
+        self.discriminator_he_mask.final.register_backward_hook(clear_nan_hook)
+        self.discriminator_p63_mask.final.register_backward_hook(clear_nan_hook)
         # endregion
 
         # region Initialize wandb model watching
@@ -329,6 +342,7 @@ class TrainingController:
                 + ssim_loss
 
         self.generator_optimizer.zero_grad()
+        generator_loss = torch.nan_to_num(generator_loss, nan=0, posinf=1, neginf=-1)
         generator_loss.backward()
         self.generator_optimizer.step()
 
@@ -346,6 +360,7 @@ class TrainingController:
             discriminator_he_loss = discriminator_he_loss_partial + discriminator_he_loss_mask_partial
 
         self.discriminator_he_optimizer.zero_grad()
+        discriminator_he_loss = torch.nan_to_num(discriminator_he_loss, nan=0, posinf=1, neginf=0)
         discriminator_he_loss.backward()
         self.discriminator_he_optimizer.step()
 
@@ -362,6 +377,7 @@ class TrainingController:
             discriminator_p63_loss = discriminator_p63_loss_partial + discriminator_p63_loss_mask_partial
 
         self.discriminator_p63_optimizer.zero_grad()
+        discriminator_p63_loss = torch.nan_to_num(discriminator_p63_loss, nan=0, posinf=1, neginf=0)
         discriminator_p63_loss.backward()
         self.discriminator_p63_optimizer.step()
 
