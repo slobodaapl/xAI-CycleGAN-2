@@ -72,12 +72,12 @@ class TrainingController:
         # endregion
 
         # region Initialize nan_removal_hooks
-        self.generator_he_to_p63.final.register_full_backward_hook(clear_nan_hook)
-        self.generator_p63_to_he.final.register_full_backward_hook(clear_nan_hook)
-        self.discriminator_he.conv_blocks.register_full_backward_hook(clear_nan_hook)
-        self.discriminator_p63.conv_blocks.register_full_backward_hook(clear_nan_hook)
-        self.discriminator_he_mask.conv_blocks.register_full_backward_hook(clear_nan_hook)
-        self.discriminator_p63_mask.conv_blocks.register_full_backward_hook(clear_nan_hook)
+        self.generator_he_to_p63.final.register_backward_hook(clear_nan_hook)
+        self.generator_p63_to_he.final.register_backward_hook(clear_nan_hook)
+        self.discriminator_he.conv_blocks.register_backward_hook(clear_nan_hook)
+        self.discriminator_p63.conv_blocks.register_backward_hook(clear_nan_hook)
+        self.discriminator_he_mask.conv_blocks.register_backward_hook(clear_nan_hook)
+        self.discriminator_p63_mask.conv_blocks.register_backward_hook(clear_nan_hook)
         # endregion
 
         # region Initialize wandb model watching
