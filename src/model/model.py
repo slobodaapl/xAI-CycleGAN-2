@@ -1,6 +1,20 @@
 import torch
 
 
+A_AB = -1.72879524581
+B_AB = 1.71528903296
+A_L = -1.68976005407
+B_L = 1.68976005407
+
+
+def tanh_correction(x: torch.Tensor) -> torch.Tensor:
+    x_l = x[:, 0:1, :, :]
+    x_ab = x[:, 1:, :, :]
+    x_l = (B_L - A_L) * (x_l + 1) / 2 + A_L
+    x_ab = (B_AB - A_AB) * (x_ab + 1) / 2 + A_AB
+    return torch.cat((x_l, x_ab), dim=1)
+
+
 class ConvBlock(torch.nn.Module):
     def __init__(self, input_size, output_size, kernel_size=3, stride=2, padding=1, activation='relu', batch_norm=True):
         super(ConvBlock, self).__init__()
@@ -140,6 +154,8 @@ class Generator(torch.nn.Module):
         dec3 = self.deconv3(dec2 + enc2)
         dec4 = self.deconv4(self.pad(dec3 + enc1))
         out = self.final(self.pad1(dec4))
+
+        out = tanh_correction(out)
 
         if mask is not None:
             # noinspection PyUnboundLocalVariable

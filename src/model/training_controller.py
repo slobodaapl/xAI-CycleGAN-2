@@ -5,6 +5,8 @@ import torch
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
+from torchmetrics.functional.image.ssim import structural_similarity_index_measure as ssim
+
 from model.dataset import DatasetFromFolder
 from model.explanation import ExplanationController
 from model.mask import get_mask
@@ -13,6 +15,9 @@ from model.utils import LambdaLR, ImagePool
 
 from setup.settings_module import Settings
 from setup.wandb_module import WandbModule
+
+
+L_RANGE = 1.68976005407
 
 
 class TrainingController:
@@ -216,10 +221,10 @@ class TrainingController:
         mask_he = get_mask(real_he, self.settings.mask_type)
         mask_p63 = get_mask(real_p63, self.settings.mask_type)
 
-        real_he = Variable(real_he.to(self.device))
-        real_p63 = Variable(real_p63.to(self.device))
-        mask_he = Variable(mask_he.to(self.device))
-        mask_p63 = Variable(mask_p63.to(self.device))
+        real_he: torch.Tensor = Variable(real_he.to(self.device))
+        real_p63: torch.Tensor = Variable(real_p63.to(self.device))
+        mask_he: torch.Tensor = Variable(mask_he.to(self.device))
+        mask_p63: torch.Tensor = Variable(mask_p63.to(self.device))
         
         with torch.autocast(device_type="cuda"):
             fake_p63 = self.generator_he_to_p63(real_he, mask_he)
@@ -243,8 +248,8 @@ class TrainingController:
 
             he_mask_inverted = 1 - mask_he
             p63_mask_inverted = 1 - mask_p63
-            he_mask_inverted = Variable(he_mask_inverted.to(self.device))
-            p63_mask_inverted = Variable(p63_mask_inverted.to(self.device))
+            he_mask_inverted: torch.Tensor = Variable(he_mask_inverted.to(self.device))
+            p63_mask_inverted: torch.Tensor = Variable(p63_mask_inverted.to(self.device))
 
             # Train generator G
             # A -> B
@@ -275,20 +280,29 @@ class TrainingController:
             identity_p63 = self.criterion_pixel_wise(real_p63, self.generator_he_to_p63(real_p63, mask_p63))
             identity_loss = (identity_he + identity_p63) * self.settings.lambda_identity
 
+            # ssim loss
+            ssim_he = ssim(real_he[:, 0:1, :, :] + L_RANGE, fake_he[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
+            ssim_p63 = ssim(real_p63[:, 0:1, :, :] + L_RANGE, fake_p63[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
+            ssim_loss = ((1 - ssim_he) + (1 - ssim_p63)) * self.settings.lambda_ssim * 0.5
+
             with torch.no_grad():
                 discriminator_he_loss_partial = self.get_partial_disc_loss(real_he, fake_he,
                                                                            self.discriminator_he,
-                                                                           1 - self.settings.lambda_mask_adversarial_ratio)
+                                                                           1 - self.settings.
+                                                                           lambda_mask_adversarial_ratio)
 
                 discriminator_he_loss_mask_partial = self.get_partial_disc_loss(real_he * mask_he, fake_he * mask_p63,
                                                                                 self.discriminator_he_mask,
-                                                                                self.settings.lambda_mask_adversarial_ratio)
+                                                                                self.settings.
+                                                                                lambda_mask_adversarial_ratio)
 
                 discriminator_p63_loss_partial = self.get_partial_disc_loss(real_p63, fake_p63,
                                                                             self.discriminator_p63,
-                                                                            1 - self.settings.lambda_mask_adversarial_ratio)
+                                                                            1 - self.settings.
+                                                                            lambda_mask_adversarial_ratio)
 
-                discriminator_p63_loss_mask_partial = self.get_partial_disc_loss(real_p63 * mask_p63, fake_p63 * mask_he,
+                discriminator_p63_loss_mask_partial = self.get_partial_disc_loss(real_p63 * mask_p63,
+                                                                                 fake_p63 * mask_he,
                                                                                  self.discriminator_p63_mask,
                                                                                  self.settings.
                                                                                  lambda_mask_adversarial_ratio)
@@ -304,6 +318,7 @@ class TrainingController:
                 + generator_p63_to_he_total_loss \
                 + cycle_loss \
                 + identity_loss \
+                + ssim_loss
 
         self.generator_optimizer.zero_grad()
         generator_loss.backward()

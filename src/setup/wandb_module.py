@@ -30,6 +30,7 @@ class WandbModule:
 
         self.step = 0
         self.log_frequency = settings.log_frequency
+        self.model_file = None
 
         self.generator_he_to_p63_running_loss_avg = RunningMeanStack(self.log_frequency)
         self.generator_p63_to_he_running_loss_avg = RunningMeanStack(self.log_frequency)
@@ -73,6 +74,9 @@ class WandbModule:
             "generation_results": wandb.Image(merged_image, caption="Top row HE->P63, Bottom P63->HE, L to R orig., transf., reconstr."),
         }, step=self.step)
 
-    def log_model(self, model_file):
-        self.model_log.add_file(model_file)
+    def log_model(self):
         self.run.log_artifact(self.model_log)
+
+    def set_model(self, model_file):
+        self.model_file = model_file
+        self.model_log.add_file(model_file)

@@ -5,7 +5,6 @@ import torch
 from model.training_controller import TrainingController
 from setup.settings_module import Settings
 from setup.wandb_module import WandbModule
-from setup.data_controller import HistoDataTracker
 
 # settings = Settings('settings_test.cfg')
 settings = Settings('src/settings.cfg')
@@ -24,6 +23,8 @@ model_dir = os.path.join(model_dir, f'{settings.name}')
 os.mkdir(model_dir) if not os.path.exists(model_dir) else None
 
 model_file = os.path.join(model_dir, f'model_checkpoint.pth')
+
+wandb_module.set_model(model_file)
 
 if os.path.exists(model_dir):
     print("Model directory: ", model_dir)
@@ -58,13 +59,16 @@ for epoch in range(settings.epochs):
                   f'Cycle Loss: {training_controller.latest_cycle_loss}\n'
                   f'Identity Loss: {training_controller.latest_identity_loss}\n')
 
-    if epoch % settings.checkpoint_frequency_epochs == 0:
+    if wandb_module.step % settings.checkpoint_frequency_steps == 0:
         torch.save({
             'epoch': epoch,
+            'wandb_step': wandb_module.step,
             'generator_he_to_p63_state_dict': training_controller.generator_he_to_p63.state_dict(),
             'generator_p63_to_he_state_dict': training_controller.generator_p63_to_he.state_dict(),
             'discriminator_he_state_dict': training_controller.discriminator_he.state_dict(),
             'discriminator_p63_state_dict': training_controller.discriminator_p63.state_dict(),
+            'discriminator_he_mask_state_dict': training_controller.discriminator_he_mask.state_dict(),
+            'discriminator_p63_mask_state_dict': training_controller.discriminator_p63_mask.state_dict(),
             'generator_optimizer_state_dict': training_controller.generator_optimizer.state_dict(),
             'discriminator_he_optimizer_state_dict': training_controller.discriminator_he_optimizer.state_dict(),
             'discriminator_p63_optimizer_state_dict': training_controller.discriminator_p63_optimizer.state_dict(),
@@ -73,4 +77,4 @@ for epoch in range(settings.epochs):
             'discriminator_p63_loss': training_controller.latest_discriminator_p63_loss,
         }, f=model_file)
 
-        wandb_module.log_model(model_file)
+        wandb_module.log_model()
