@@ -138,7 +138,7 @@ class Generator(torch.nn.Module):
             inv_masked_img = self.conv1dm(inv_masked_img)
 
         img = self.interpretable_conv_1(img)
-        img = self.interpretable_conv_3(img)
+        img = self.interpretable_conv_2(img)
 
         enc1 = self.conv1(self.pad(img))  # (bs, num_filter, 128, 128)
         enc2 = self.conv2(enc1)  # (bs, num_filter * 2, 64, 64)
