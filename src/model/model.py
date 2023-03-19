@@ -93,8 +93,8 @@ class Generator(torch.nn.Module):
         self.conv1dm = ConvBlock(input_dim * 2, input_dim, kernel_size=1, stride=1, padding=0, activation='no_act',
                                  batch_norm=False)
         
-        self.interpretable_conv_1 = ConvBlock(input_dim, num_filter/2, kernel_size=1, stride=1, padding=0)
-        self.interpretable_conv_2 = ConvBlock(num_filter/2, num_filter/2, kernel_size=1, stride=1, padding=0)
+        self.interpretable_conv_1 = ConvBlock(input_dim, num_filter//2, kernel_size=1, stride=1, padding=0)
+        self.interpretable_conv_2 = ConvBlock(num_filter//2, num_filter//2, kernel_size=1, stride=1, padding=0)
 
         self.interpretable_conv_1m = ConvBlock(input_dim, num_filter, kernel_size=1, stride=1, padding=0)
         self.interpretable_conv_2m = ConvBlock(num_filter, num_filter, kernel_size=1, stride=1, padding=0)
@@ -108,7 +108,7 @@ class Generator(torch.nn.Module):
         self.pad1 = torch.nn.ReflectionPad2d(1)
 
         # Encoder
-        self.conv1 = ConvBlock(num_filter/2, num_filter, kernel_size=7, stride=1, padding=0)
+        self.conv1 = ConvBlock(num_filter//2, num_filter, kernel_size=7, stride=1, padding=0)
         self.conv2 = ConvBlock(num_filter, num_filter * 2)
         num_filter *= 2
         self.conv3 = ConvBlock(num_filter, num_filter * 2)
