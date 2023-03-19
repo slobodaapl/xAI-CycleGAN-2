@@ -55,8 +55,8 @@ for epoch in range(settings.epochs):
                   f'Discriminator H&E Loss: {training_controller.latest_discriminator_he_loss}\n'
                   f'Discriminator P63 Loss: {training_controller.latest_discriminator_p63_loss}\n'
                   f'Cycle Loss: {training_controller.latest_cycle_loss}\n'
-                  f'Identity Loss: {training_controller.latest_identity_loss}\n'
-                  f'SSIM Loss: {training_controller.latest_ssim_loss}\n')
+                  f'Identity Loss: {training_controller.latest_identity_loss}\n')
+                  #f'SSIM Loss: {training_controller.latest_ssim_loss}\n')
 
     if wandb_module.step % settings.checkpoint_frequency_steps == 0:
         torch.save({

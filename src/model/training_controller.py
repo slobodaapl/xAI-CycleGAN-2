@@ -32,7 +32,7 @@ class TrainingController:
         self.latest_discriminator_p63_loss = None
         self.latest_identity_loss = None
         self.latest_cycle_loss = None
-        self.latest_ssim_loss = None
+        #self.latest_ssim_loss = None
 
         # region Initialize data loaders
         self.train_he_data = DatasetFromFolder(settings.data_root, settings.data_train_he, settings.norm_dict)
@@ -282,16 +282,16 @@ class TrainingController:
             identity_loss = (identity_he + identity_p63) * self.settings.lambda_identity
 
             # ssim loss
-            ssim_he = ssim(real_he[:, 0:1, :, :] + L_RANGE, cycled_he[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
-            ssim_he_fake = ssim(real_he[:, 0:1, :, :] + L_RANGE, fake_p63[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
-            ssim_p63 = ssim(real_p63[:, 0:1, :, :] + L_RANGE, cycled_p63[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
-            ssim_p63_fake = ssim(real_p63[:, 0:1, :, :] + L_RANGE, fake_he[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
-            ssim_loss = (
-                + (1 - ssim_he)
-                + (1 - ssim_p63)
-                + (1 - ssim_he_fake) * 0.5
-                + (1 - ssim_p63_fake) * 0.5
-            ) * self.settings.lambda_ssim * 0.25
+            # ssim_he = ssim(real_he[:, 0:1, :, :] + L_RANGE, cycled_he[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
+            # ssim_he_fake = ssim(real_he[:, 0:1, :, :] + L_RANGE, fake_p63[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
+            # ssim_p63 = ssim(real_p63[:, 0:1, :, :] + L_RANGE, cycled_p63[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
+            # ssim_p63_fake = ssim(real_p63[:, 0:1, :, :] + L_RANGE, fake_he[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
+            # ssim_loss = (
+            #     + (1 - ssim_he)
+            #     + (1 - ssim_p63)
+            #     + (1 - ssim_he_fake) * 0.5
+            #     + (1 - ssim_p63_fake) * 0.5
+            # ) * self.settings.lambda_ssim * 0.25
 
             with torch.no_grad():
                 discriminator_he_loss_partial = self.get_partial_disc_loss(real_he, fake_he,
@@ -324,7 +324,7 @@ class TrainingController:
             generator_p63_to_he_total_loss = torch.nan_to_num(generator_p63_to_he_total_loss, nan=0, posinf=0, neginf=0)
             cycle_loss = torch.nan_to_num(cycle_loss, nan=0, posinf=0, neginf=0)
             identity_loss = torch.nan_to_num(identity_loss, nan=0, posinf=0, neginf=0)
-            ssim_loss = torch.nan_to_num(ssim_loss, nan=0, posinf=0, neginf=0)
+            #ssim_loss = torch.nan_to_num(ssim_loss, nan=0, posinf=0, neginf=0)
 
             # backward gen
             generator_loss = \
@@ -332,7 +332,7 @@ class TrainingController:
                 + generator_p63_to_he_total_loss \
                 + cycle_loss \
                 + identity_loss \
-                + ssim_loss
+                #+ ssim_loss
 
         self.generator_optimizer.zero_grad()
         generator_loss.backward()
