@@ -1,10 +1,61 @@
 import torch
+import kornia
+from typing import Tuple, Union
 
+from kornia.core.check import KORNIA_CHECK_SHAPE
+from kornia.filters.kernels import _unpack_2d_ks, get_gaussian_kernel2d
+from kornia.filters.median import _compute_zero_padding
+from kornia.core import Tensor, pad
 
 A_AB = -1.72879524581
 B_AB = 1.71528903296
 A_L = -1.68976005407
 B_L = 1.68976005407
+
+
+def joint_bilateral_blur(
+    inp: Tensor,
+    guidance: Tensor | None,
+    kernel_size: Union[Tuple[int, int], int],
+    sigma_color: Union[float, Tensor],
+    sigma_space: Union[Tuple[float, float], Tensor],
+    border_type: str = 'reflect',
+    color_distance_type: str = 'l1',
+) -> Tensor:
+    "Single implementation for both Bilateral Filter and Joint Bilateral Filter"
+
+    if isinstance(sigma_color, torch.Tensor):
+        KORNIA_CHECK_SHAPE(sigma_color, ['B'])
+        sigma_color = sigma_color.to(device=inp.device, dtype=inp.dtype).view(-1, 1, 1, 1, 1)
+
+    kx, ky = _unpack_2d_ks(kernel_size)
+    pad_x, pad_y = _compute_zero_padding(kernel_size)
+
+    padded_input = pad(inp, (pad_x, pad_x, pad_y, pad_y), mode=border_type)
+    unfolded_input = padded_input.unfold(2, ky, 1).unfold(3, kx, 1).flatten(-2)  # (B, C, H, W, K x K)
+
+    if guidance is None:
+        guidance = inp
+        unfolded_guidance = unfolded_input
+    else:
+        padded_guidance = pad(guidance, (pad_x, pad_x, pad_y, pad_y), mode=border_type)
+        unfolded_guidance = padded_guidance.unfold(2, ky, 1).unfold(3, kx, 1).flatten(-2)  # (B, C, H, W, K x K)
+
+    diff = unfolded_guidance - guidance.unsqueeze(-1)
+    if color_distance_type == "l1":
+        color_distance_sq = diff.abs().sum(1, keepdim=True).square()
+    elif color_distance_type == "l2":
+        color_distance_sq = diff.square().sum(1, keepdim=True)
+    else:
+        raise ValueError("color_distance_type only acceps l1 or l2")
+    color_kernel = (-0.5 / sigma_color**2 * color_distance_sq).exp()  # (B, 1, H, W, K x K)
+
+    space_kernel = get_gaussian_kernel2d(kernel_size, sigma_space, device=inp.device, dtype=inp.dtype)
+    space_kernel = space_kernel.view(-1, 1, 1, 1, kx * ky)
+
+    kernel = space_kernel * color_kernel
+    out = (unfolded_input * kernel).sum(-1) / kernel.sum(-1)
+    return out
 
 
 def tanh_correction(x: torch.Tensor) -> torch.Tensor:
@@ -133,20 +184,25 @@ class Generator(torch.nn.Module):
         self.deconv4 = ConvBlock(num_filter, num_filter, kernel_size=7, stride=1, padding=0)
         self.final = ConvBlock(num_filter, output_dim, kernel_size=3, stride=1, padding=0,
                                activation='tanh', batch_norm=False)
+
+        self.unsharp_filter = kornia.filters.UnsharpMask((5, 5), (2.5, 2.5))
+        self.guided_blur = lambda inp, gui: joint_bilateral_blur(inp, gui, (3, 3), 0.1, (1.5, 1.5))
         
     def forward(self, img, mask=None):
         # Mask encoder
         if mask is not None:
             inv_masked_img = torch.cat(((1 - mask) * img, (1 - mask).expand(img.size(0), -1, -1, -1)), 1) # context
-            img = torch.cat((mask*img, mask.expand(img.size(0), -1, -1, -1)), 1) # mask
+            imgx = torch.cat((mask*img, mask.expand(img.size(0), -1, -1, -1)), 1) # mask
 
-            img = self.conv1dc(img)
+            imgx = self.conv1dc(imgx)
             inv_masked_img = self.conv1dm(inv_masked_img)
 
-            img = self.interpretable_conv_1(img)
-            img = self.interpretable_conv_2(img)
+            imgx = self.interpretable_conv_1(imgx)
+            imgx = self.interpretable_conv_2(imgx)
+        else:
+            imgx = img
 
-        enc1 = self.conv1(self.pad(img))  # (bs, num_filter, 128, 128)
+        enc1 = self.conv1(self.pad(imgx))  # (bs, num_filter, 128, 128)
         enc2 = self.conv2(enc1)  # (bs, num_filter * 2, 64, 64)
         enc3 = self.conv3(enc2)  # (bs, num_filter * 4, 32, 32)
         enc4 = self.conv4(enc3)  # (bs, num_filter * 8, 16, 16)
@@ -166,6 +222,9 @@ class Generator(torch.nn.Module):
         if mask is not None:
             # noinspection PyUnboundLocalVariable
             out = out + inv_masked_img
+
+        out = self.guided_blur(out, img)
+        out = self.unsharp_filter(out)
 
         return out
 
