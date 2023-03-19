@@ -29,7 +29,7 @@ class TrainingController:
         
         self.latest_generator_loss = None
         self.latest_discriminator_he_loss = None
-        self.latest_discriminator_p63_loss= None
+        self.latest_discriminator_p63_loss = None
         self.latest_identity_loss = None
         self.latest_cycle_loss = None
         self.latest_ssim_loss = None
@@ -121,17 +121,17 @@ class TrainingController:
 
         self.generator_optimizer = torch.optim.Adam(
             itertools.chain(self.generator_he_to_p63.parameters(), self.generator_p63_to_he.parameters()),
-            lr=settings.lr_generator, betas=(settings.beta1, settings.beta2)
+            lr=settings.lr_generator, betas=(settings.beta1, settings.beta2), weight_decay=1e-5
         )
 
         self.discriminator_he_optimizer = torch.optim.Adam(
             discriminator_he_params,
-            lr=settings.lr_discriminator, betas=(settings.beta1, settings.beta2)
+            lr=settings.lr_discriminator, betas=(settings.beta1, settings.beta2), weight_decay=1e-5
         )
 
         self.discriminator_p63_optimizer = torch.optim.Adam(
             discriminator_p63_params,
-            lr=settings.lr_discriminator, betas=(settings.beta1, settings.beta2)
+            lr=settings.lr_discriminator, betas=(settings.beta1, settings.beta2), weight_decay=1e-5
         )
 
         self.lr_generator_scheduler = torch.optim.lr_scheduler.LambdaLR(
@@ -289,8 +289,8 @@ class TrainingController:
             ssim_loss = (
                 + (1 - ssim_he)
                 + (1 - ssim_p63)
-                + (1 - ssim_he_fake) * 0.75
-                + (1 - ssim_p63_fake) * 0.75
+                + (1 - ssim_he_fake) * 0.5
+                + (1 - ssim_p63_fake) * 0.5
             ) * self.settings.lambda_ssim * 0.25
 
             with torch.no_grad():
@@ -320,6 +320,12 @@ class TrainingController:
                 self.p63_explainer.get_explanation()
                 self.he_explainer.get_explanation()
 
+            generator_he_to_p63_total_loss = torch.nan_to_num(generator_he_to_p63_total_loss, nan=0, posinf=0, neginf=0)
+            generator_p63_to_he_total_loss = torch.nan_to_num(generator_p63_to_he_total_loss, nan=0, posinf=0, neginf=0)
+            cycle_loss = torch.nan_to_num(cycle_loss, nan=0, posinf=0, neginf=0)
+            identity_loss = torch.nan_to_num(identity_loss, nan=0, posinf=0, neginf=0)
+            ssim_loss = torch.nan_to_num(ssim_loss, nan=0, posinf=0, neginf=0)
+
             # backward gen
             generator_loss = \
                 + generator_he_to_p63_total_loss \
@@ -329,7 +335,6 @@ class TrainingController:
                 + ssim_loss
 
         self.generator_optimizer.zero_grad()
-        generator_loss = torch.nan_to_num(generator_loss, nan=0, posinf=1, neginf=-1)
         generator_loss.backward()
         self.generator_optimizer.step()
 
