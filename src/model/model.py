@@ -95,7 +95,13 @@ class Generator(torch.nn.Module):
         
         self.interpretable_conv_1 = ConvBlock(input_dim, num_filter, kernel_size=1, stride=1, padding=0)
         self.interpretable_conv_2 = ConvBlock(num_filter, num_filter, kernel_size=1, stride=1, padding=0)
-        self.interpretable_conv_3 = ConvBlock(num_filter, num_filter, kernel_size=1, stride=1, padding=0)
+
+        self.interpretable_conv_1m = ConvBlock(input_dim, num_filter, kernel_size=1, stride=1, padding=0)
+        self.interpretable_conv_2m = ConvBlock(num_filter, num_filter, kernel_size=1, stride=1, padding=0)
+
+        self.mask_downconv = ConvBlock(num_filter, input_dim, kernel_size=1, stride=1, padding=0)
+
+        self.mask_layer_merge = ConvBlock(input_dim * 2, input_dim, kernel_size=1, stride=1, padding=0)
 
         # Reflection padding
         self.pad = torch.nn.ReflectionPad2d(3)
@@ -140,6 +146,11 @@ class Generator(torch.nn.Module):
             img = self.interpretable_conv_1(img)
             img = self.interpretable_conv_2(img)
 
+            inv_masked_img = self.interpretable_conv_1m(inv_masked_img)
+            inv_masked_img = self.interpretable_conv_2m(inv_masked_img)
+
+            inv_masked_img = self.mask_downconv(inv_masked_img)
+
         enc1 = self.conv1(self.pad(img))  # (bs, num_filter, 128, 128)
         enc2 = self.conv2(enc1)  # (bs, num_filter * 2, 64, 64)
         enc3 = self.conv3(enc2)  # (bs, num_filter * 4, 32, 32)
@@ -159,7 +170,8 @@ class Generator(torch.nn.Module):
 
         if mask is not None:
             # noinspection PyUnboundLocalVariable
-            out = out + inv_masked_img
+            out = self.mask_layer_merge(torch.cat((out, inv_masked_img), 1))
+            #out = out + inv_masked_img
 
         return out
 
