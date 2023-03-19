@@ -97,6 +97,8 @@ class Generator(torch.nn.Module):
         self.interpretable_conv_2 = ConvBlock(num_filter, num_filter, kernel_size=1, stride=1, padding=0)
         self.interpretable_conv_3 = ConvBlock(num_filter, num_filter, kernel_size=1, stride=1, padding=0)
 
+        self.interpretable_reduce = ConvBlock(num_filter*2, 3, kernel_size=1, stride=1, padding=0)
+
         # Reflection padding
         self.pad = torch.nn.ReflectionPad2d(3)
         self.pad1 = torch.nn.ReflectionPad2d(1)
@@ -160,7 +162,7 @@ class Generator(torch.nn.Module):
 
         if mask is not None:
             # noinspection PyUnboundLocalVariable
-            out = out + inv_masked_img
+            out = self.interpretable_reduce(torch.cat((out, img), 1))
 
         return out
 
