@@ -25,7 +25,7 @@ def joint_bilateral_blur(
 ) -> Tensor:
     "Single implementation for both Bilateral Filter and Joint Bilateral Filter"
 
-    if isinstance(sigma_color, torch.Tensor):
+    if isinstance(sigma_color, Tensor):
         KORNIA_CHECK_SHAPE(sigma_color, ['B'])
         sigma_color = sigma_color.to(device=inp.device, dtype=inp.dtype).view(-1, 1, 1, 1, 1)
 
@@ -186,8 +186,8 @@ class Generator(torch.nn.Module):
         self.final = ConvBlock(num_filter, output_dim, kernel_size=3, stride=1, padding=0,
                                activation='tanh', batch_norm=False)
 
-        self.unsharp_filter = kornia.filters.UnsharpMask((5, 5), (2.5, 2.5))
-        self.guided_blur = lambda inp, gui: joint_bilateral_blur(inp, gui, (3, 3), 0.1, (1.5, 1.5))
+        self.unsharp_filter = kornia.filters.UnsharpMask((5, 5), (1.5, 1.5))
+        self.guided_blur = lambda inp, gui: joint_bilateral_blur(inp, gui, (5, 5), 0.1, (1.5, 1.5))
         
     def forward(self, img, mask=None):
         # Mask encoder
