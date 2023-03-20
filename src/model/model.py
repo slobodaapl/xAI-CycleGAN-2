@@ -101,7 +101,7 @@ class DeconvBlock(torch.nn.Module):
         self.batch_norm = batch_norm
         self.bn = torch.nn.InstanceNorm2d(output_size)
         self.activation = activation
-        self.leakyrelu = torch.nn.LeakyReLU(0.2, inplace=True)
+        self.leakyrelu = torch.nn.ELU(A_AB, inplace=True)
 
     def forward(self, x):
         if self.batch_norm:
@@ -118,7 +118,7 @@ class ResnetBlock(torch.nn.Module):
         conv1 = torch.nn.Conv2d(num_filter, num_filter, kernel_size, stride, padding)
         conv2 = torch.nn.Conv2d(num_filter, num_filter, kernel_size, stride, padding)
         bn = torch.nn.InstanceNorm2d(num_filter)
-        relu = torch.nn.ReLU(inplace=True)
+        relu = torch.nn.GELU(approximate='tanh')
         pad = torch.nn.ReflectionPad2d(1)
 
         self.resnet_block = torch.nn.Sequential(
@@ -183,6 +183,8 @@ class Generator(torch.nn.Module):
         self.deconv3 = DeconvBlock(num_filter, num_filter // 2)
         num_filter //= 2
         self.deconv4 = ConvBlock(num_filter, num_filter, kernel_size=7, stride=1, padding=0)
+        self.correction = ConvBlock(num_filter, num_filter, kernel_size=3, stride=1, padding=0,
+                                    activation='no_act', batch_norm=False)
         self.final = ConvBlock(num_filter, output_dim, kernel_size=3, stride=1, padding=0,
                                activation='tanh', batch_norm=False)
 
@@ -216,7 +218,8 @@ class Generator(torch.nn.Module):
         dec2 = self.deconv2(dec1 + enc3)
         dec3 = self.deconv3(dec2 + enc2)
         dec4 = self.deconv4(self.pad(dec3 + enc1))
-        out = self.final(self.pad1(dec4))
+        out = self.correction(self.pad1(dec4))
+        out = self.final(self.pad1(out))
 
         out = tanh_correction(out)
 
