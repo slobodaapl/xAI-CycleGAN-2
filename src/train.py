@@ -29,6 +29,8 @@ if os.path.exists(model_dir):
     print("Model checkpoint file: ", model_file)
 else:
     exit(1)
+
+model_step = 0
     
 #tracker = HistoDataTracker()
 #data_step = 0
@@ -74,6 +76,7 @@ for epoch in range(settings.epochs):
                 'generator_loss': training_controller.latest_generator_loss,
                 'discriminator_he_loss': training_controller.latest_discriminator_he_loss,
                 'discriminator_p63_loss': training_controller.latest_discriminator_p63_loss,
-            }, f=model_file)
+            }, f=os.path.join(model_dir, f'model_checkpoint_{model_step}.pth'))
+            model_step += 1
 
-            wandb_module.log_model(model_file)
+            # wandb_module.log_model(model_file)
