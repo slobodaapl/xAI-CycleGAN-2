@@ -13,9 +13,10 @@ A_L = -1.68976005407
 B_L = 1.68976005407
 
 
+# This function is from a new versions of Kornia, not my code
 def joint_bilateral_blur(
     inp: Tensor,
-    guidance: Tensor | None,
+    guidance: Union[Tensor, None],
     kernel_size: Union[Tuple[int, int], int],
     sigma_color: Union[float, Tensor],
     sigma_space: Union[Tuple[float, float], Tensor],
