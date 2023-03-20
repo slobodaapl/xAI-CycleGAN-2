@@ -58,22 +58,22 @@ for epoch in range(settings.epochs):
                   f'Identity Loss: {training_controller.latest_identity_loss}\n')
                   #f'SSIM Loss: {training_controller.latest_ssim_loss}\n')
 
-    if wandb_module.step % settings.checkpoint_frequency_steps == 0:
-        torch.save({
-            'epoch': epoch,
-            'wandb_step': wandb_module.step,
-            'generator_he_to_p63_state_dict': training_controller.generator_he_to_p63.state_dict(),
-            'generator_p63_to_he_state_dict': training_controller.generator_p63_to_he.state_dict(),
-            'discriminator_he_state_dict': training_controller.discriminator_he.state_dict(),
-            'discriminator_p63_state_dict': training_controller.discriminator_p63.state_dict(),
-            'discriminator_he_mask_state_dict': training_controller.discriminator_he_mask.state_dict(),
-            'discriminator_p63_mask_state_dict': training_controller.discriminator_p63_mask.state_dict(),
-            'generator_optimizer_state_dict': training_controller.generator_optimizer.state_dict(),
-            'discriminator_he_optimizer_state_dict': training_controller.discriminator_he_optimizer.state_dict(),
-            'discriminator_p63_optimizer_state_dict': training_controller.discriminator_p63_optimizer.state_dict(),
-            'generator_loss': training_controller.latest_generator_loss,
-            'discriminator_he_loss': training_controller.latest_discriminator_he_loss,
-            'discriminator_p63_loss': training_controller.latest_discriminator_p63_loss,
-        }, f=model_file)
+        if wandb_module.step % settings.checkpoint_frequency_steps == 0:
+            torch.save({
+                'epoch': epoch,
+                'wandb_step': wandb_module.step,
+                'generator_he_to_p63_state_dict': training_controller.generator_he_to_p63.state_dict(),
+                'generator_p63_to_he_state_dict': training_controller.generator_p63_to_he.state_dict(),
+                'discriminator_he_state_dict': training_controller.discriminator_he.state_dict(),
+                'discriminator_p63_state_dict': training_controller.discriminator_p63.state_dict(),
+                'discriminator_he_mask_state_dict': training_controller.discriminator_he_mask.state_dict(),
+                'discriminator_p63_mask_state_dict': training_controller.discriminator_p63_mask.state_dict(),
+                'generator_optimizer_state_dict': training_controller.generator_optimizer.state_dict(),
+                'discriminator_he_optimizer_state_dict': training_controller.discriminator_he_optimizer.state_dict(),
+                'discriminator_p63_optimizer_state_dict': training_controller.discriminator_p63_optimizer.state_dict(),
+                'generator_loss': training_controller.latest_generator_loss,
+                'discriminator_he_loss': training_controller.latest_discriminator_he_loss,
+                'discriminator_p63_loss': training_controller.latest_discriminator_p63_loss,
+            }, f=model_file)
 
-        wandb_module.log_model(model_file)
+            wandb_module.log_model(model_file)
