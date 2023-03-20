@@ -5,7 +5,7 @@ import torch
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from torchmetrics.functional.image.ssim import structural_similarity_index_measure as ssim
+# from torchmetrics.functional.image.ssim import structural_similarity_index_measure as ssim
 
 from model.dataset import DatasetFromFolder
 from model.explanation import ExplanationController
@@ -378,7 +378,7 @@ class TrainingController:
         self.latest_discriminator_p63_loss = discriminator_p63_loss.item()
         self.latest_identity_loss = identity_loss.item()
         self.latest_cycle_loss = cycle_loss.item()
-        self.latest_ssim_loss = ssim_loss.item()
+        # self.latest_ssim_loss = ssim_loss.item()
 
         self.wandb_module.discriminator_he_running_loss_avg.append(discriminator_he_loss.item())
         self.wandb_module.discriminator_p63_running_loss_avg.append(discriminator_p63_loss.item())
