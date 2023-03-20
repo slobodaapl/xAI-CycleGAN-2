@@ -101,7 +101,7 @@ class DeconvBlock(torch.nn.Module):
         self.batch_norm = batch_norm
         self.bn = torch.nn.InstanceNorm2d(output_size)
         self.activation = activation
-        self.leakyrelu = torch.nn.ELU(A_AB, inplace=True)
+        self.leakyrelu = torch.nn.ELU(A_AB)
 
     def forward(self, x):
         if self.batch_norm:
