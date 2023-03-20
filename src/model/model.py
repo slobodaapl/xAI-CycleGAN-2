@@ -118,7 +118,7 @@ class ResnetBlock(torch.nn.Module):
         conv1 = torch.nn.Conv2d(num_filter, num_filter, kernel_size, stride, padding)
         conv2 = torch.nn.Conv2d(num_filter, num_filter, kernel_size, stride, padding)
         bn = torch.nn.InstanceNorm2d(num_filter)
-        relu = torch.nn.GELU(approximate='tanh')
+        relu = torch.nn.GELU()
         pad = torch.nn.ReflectionPad2d(1)
 
         self.resnet_block = torch.nn.Sequential(
