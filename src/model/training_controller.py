@@ -36,6 +36,8 @@ class TrainingController:
         self.latest_identity_loss = None
         self.latest_cycle_loss = None
         #self.latest_ssim_loss = None
+        self.latest_context_loss = None
+        self.latest_cycle_context_loss = None
 
         # region Initialize data loaders
         self.train_he_data = DatasetFromFolder(settings.data_root, settings.data_train_he, settings.norm_dict)
@@ -416,6 +418,8 @@ class TrainingController:
         self.latest_discriminator_p63_loss = discriminator_p63_loss.item()
         self.latest_identity_loss = identity_loss.item()
         self.latest_cycle_loss = cycle_loss.item()
+        self.latest_context_loss = context_loss.item()
+        self.latest_cycle_context_loss = cycle_context_loss.item()
         # self.latest_ssim_loss = ssim_loss.item()
 
         self.wandb_module.discriminator_he_running_loss_avg.append(discriminator_he_loss.item())
@@ -425,6 +429,8 @@ class TrainingController:
         self.wandb_module.cycle_he_running_loss_avg.append(cycle_loss.item())
         self.wandb_module.cycle_p63_running_loss_avg.append(cycle_loss.item())
         self.wandb_module.total_running_loss_avg.append(generator_loss.item())
+        self.wandb_module.context_running_loss_avg.append(context_loss.item())
+        self.wandb_module.cycle_context_running_loss_avg.append(cycle_context_loss.item())
 
     def get_image_pairs(self):
         real_he = self.test_he_data.get_random_image()

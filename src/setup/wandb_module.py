@@ -39,6 +39,8 @@ class WandbModule:
         self.cycle_he_running_loss_avg = RunningMeanStack(self.log_frequency)
         self.cycle_p63_running_loss_avg = RunningMeanStack(self.log_frequency)
         self.total_running_loss_avg = RunningMeanStack(self.log_frequency)
+        self.context_running_loss_avg = RunningMeanStack(self.log_frequency)
+        self.cycle_context_running_loss_avg = RunningMeanStack(self.log_frequency)
 
     def log(self, epoch):
         self.run.log({
@@ -49,6 +51,8 @@ class WandbModule:
             "he_cycle_loss": self.cycle_he_running_loss_avg.mean,
             "p63_cycle_loss": self.cycle_p63_running_loss_avg.mean,
             "total_generator_loss": self.total_running_loss_avg.mean,
+            "context_loss": self.context_running_loss_avg.mean,
+            "cycle_context_loss": self.cycle_context_running_loss_avg.mean,
             "epoch": epoch,
         }, step=self.step)
 
