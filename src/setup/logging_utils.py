@@ -93,5 +93,5 @@ def normalize_image(img):
     img[0, 2] = img[0, 2].clamp(-128, 127)
 
     img = kornia.color.lab_to_rgb(img)
-    img = img.squeeze(0).permute(1, 2, 0).numpy()
+    img = (img.squeeze(0).permute(1, 2, 0).numpy() * 255).astype('uint8')
     return img

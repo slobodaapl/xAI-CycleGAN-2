@@ -26,6 +26,9 @@ class TrainingController:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.settings = settings
         self.wandb_module = wandb_module
+
+        # Settings
+        # torch.backends.cudnn.benchmark = True
         
         self.latest_generator_loss = None
         self.latest_discriminator_he_loss = None
@@ -36,16 +39,20 @@ class TrainingController:
 
         # region Initialize data loaders
         self.train_he_data = DatasetFromFolder(settings.data_root, settings.data_train_he, settings.norm_dict)
-        self.train_he = DataLoader(dataset=self.train_he_data, batch_size=settings.batch_size, shuffle=True)
+        self.train_he = DataLoader(dataset=self.train_he_data, batch_size=settings.batch_size,
+                                   shuffle=True, pin_memory=True, num_workers=4)
 
         self.train_p63_data = DatasetFromFolder(settings.data_root, settings.data_train_p63, settings.norm_dict)
-        self.train_p63 = DataLoader(dataset=self.train_p63_data, batch_size=settings.batch_size, shuffle=True)
+        self.train_p63 = DataLoader(dataset=self.train_p63_data, batch_size=settings.batch_size,
+                                    shuffle=True, pin_memory=True, num_workers=4)
 
         self.test_he_data = DatasetFromFolder(settings.data_root, settings.data_test_he, settings.norm_dict)
-        self.test_he = DataLoader(dataset=self.test_he_data, batch_size=settings.batch_size, shuffle=False)
+        self.test_he = DataLoader(dataset=self.test_he_data, batch_size=settings.batch_size,
+                                  shuffle=False, pin_memory=True, num_workers=4)
 
         self.test_p63_data = DatasetFromFolder(settings.data_root, settings.data_test_p63, settings.norm_dict)
-        self.test_p63 = DataLoader(dataset=self.test_p63_data, batch_size=settings.batch_size, shuffle=False)
+        self.test_p63 = DataLoader(dataset=self.test_p63_data, batch_size=settings.batch_size,
+                                   shuffle=False, pin_memory=True, num_workers=4)
         # endregion
 
         # region Initialize models
@@ -229,9 +236,20 @@ class TrainingController:
         
         with torch.autocast(device_type="cuda"):
             fake_p63 = self.generator_he_to_p63(real_he, mask_he)
+
+            encoded_he_in_he_to_p63 = self.generator_he_to_p63.enc4
+
             fake_he = self.generator_p63_to_he(real_p63, mask_p63)
+
+            encoded_p63_in_p63_to_he = self.generator_p63_to_he.enc4
+
             cycled_he = self.generator_p63_to_he(fake_p63, mask_he)
+
+            encoded_fp63_in_p63_to_he = self.generator_p63_to_he.enc4
+
             cycled_p63 = self.generator_he_to_p63(fake_he, mask_p63)
+
+            encoded_fhe_in_he_to_p63 = self.generator_he_to_p63.enc4
 
             self.p63_explainer.set_explanation_m(fake_p63 * mask_he)
             self.he_explainer.set_explanation_m(fake_he * mask_p63)
@@ -278,8 +296,26 @@ class TrainingController:
 
             # identity loss
             identity_he = self.criterion_pixel_wise(real_he, self.generator_p63_to_he(real_he, mask_he))
+
+            encoded_he_in_p63_to_he = self.generator_p63_to_he.enc4
+
             identity_p63 = self.criterion_pixel_wise(real_p63, self.generator_he_to_p63(real_p63, mask_p63))
+
+            encoded_p63_in_he_to_p63 = self.generator_he_to_p63.enc4
+
             identity_loss = (identity_he + identity_p63) * self.settings.lambda_identity
+
+            context_loss = torch.nn.functional.huber_loss(encoded_he_in_he_to_p63, encoded_he_in_p63_to_he) + \
+                            torch.nn.functional.huber_loss(encoded_p63_in_p63_to_he, encoded_p63_in_he_to_p63)
+
+            context_loss /= 2
+            context_loss *= self.settings.lambda_context
+
+            cycle_context_loss = torch.nn.functional.huber_loss(encoded_fp63_in_p63_to_he, encoded_he_in_he_to_p63) + \
+                            torch.nn.functional.huber_loss(encoded_fhe_in_he_to_p63, encoded_p63_in_p63_to_he)
+
+            cycle_context_loss /= 2
+            cycle_context_loss *= self.settings.lambda_cycle_context
 
             # ssim loss
             # ssim_he = ssim(real_he[:, 0:1, :, :] + L_RANGE, cycled_he[:, 0:1, :, :] + L_RANGE, data_range=L_RANGE*2)
@@ -332,9 +368,11 @@ class TrainingController:
                 + generator_p63_to_he_total_loss \
                 + cycle_loss \
                 + identity_loss \
+                + context_loss \
+                + cycle_context_loss \
                 #+ ssim_loss
 
-        self.generator_optimizer.zero_grad()
+        self.generator_optimizer.zero_grad(set_to_none=True)
         generator_loss.backward()
         self.generator_optimizer.step()
 
@@ -351,7 +389,7 @@ class TrainingController:
 
             discriminator_he_loss = discriminator_he_loss_partial + discriminator_he_loss_mask_partial
 
-        self.discriminator_he_optimizer.zero_grad()
+        self.discriminator_he_optimizer.zero_grad(set_to_none=True)
         discriminator_he_loss = torch.nan_to_num(discriminator_he_loss, nan=0, posinf=1, neginf=0)
         discriminator_he_loss.backward()
         self.discriminator_he_optimizer.step()
@@ -368,7 +406,7 @@ class TrainingController:
 
             discriminator_p63_loss = discriminator_p63_loss_partial + discriminator_p63_loss_mask_partial
 
-        self.discriminator_p63_optimizer.zero_grad()
+        self.discriminator_p63_optimizer.zero_grad(set_to_none=True)
         discriminator_p63_loss = torch.nan_to_num(discriminator_p63_loss, nan=0, posinf=1, neginf=0)
         discriminator_p63_loss.backward()
         self.discriminator_p63_optimizer.step()

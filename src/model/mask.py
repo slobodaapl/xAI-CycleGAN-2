@@ -10,7 +10,7 @@ from functools import partial
 
 
 def get_mask_noise(image, mean=1.0, std=0.02):  # A simple noise mask, with mean and std as parameters
-    return torch.tensor(np.random.normal(mean, std, image.shape), dtype=torch.float32)
+    return torch.normal(torch.full(image.shape, mean), std).cuda()
 
 
 def get_mask_entropy(image, disk_size=9):  # A simple entropy mask, with disk size as parameter

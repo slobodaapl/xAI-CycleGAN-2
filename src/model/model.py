@@ -190,6 +190,8 @@ class Generator(torch.nn.Module):
 
         self.unsharp_filter = kornia.filters.UnsharpMask((5, 5), (1.5, 1.5))
         self.guided_blur = lambda inp, gui: joint_bilateral_blur(inp, gui, (5, 5), 0.1, (1.5, 1.5))
+
+        self.enc4 = None
         
     def forward(self, img, mask=None):
         # Mask encoder
@@ -208,13 +210,13 @@ class Generator(torch.nn.Module):
         enc1 = self.conv1(self.pad(imgx))  # (bs, num_filter, 128, 128)
         enc2 = self.conv2(enc1)  # (bs, num_filter * 2, 64, 64)
         enc3 = self.conv3(enc2)  # (bs, num_filter * 4, 32, 32)
-        enc4 = self.conv4(enc3)  # (bs, num_filter * 8, 16, 16)
+        self.enc4 = self.conv4(enc3)  # (bs, num_filter * 8, 16, 16)
 
         # Resnet blocks
-        res = self.resnet_blocks(enc4)
+        res = self.resnet_blocks(self.enc4)
 
         # Decoder
-        dec1 = self.deconv1(res + enc4)
+        dec1 = self.deconv1(res + self.enc4)
         dec2 = self.deconv2(dec1 + enc3)
         dec3 = self.deconv3(dec2 + enc2)
         dec4 = self.deconv4(self.pad(dec3 + enc1))
