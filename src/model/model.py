@@ -139,6 +139,8 @@ class Generator(torch.nn.Module):
     def __init__(self, num_filter, num_resnet, input_dim=3, output_dim=3):
         super(Generator, self).__init__()
 
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
         # Mask encoder
         self.conv1dc = ConvBlock(input_dim * 2, input_dim, kernel_size=1, stride=1, padding=0, activation='no_act',
                                  batch_norm=False)
@@ -192,6 +194,7 @@ class Generator(torch.nn.Module):
         self.guided_blur = lambda inp, gui: joint_bilateral_blur(inp, gui, (5, 5), 0.1, (1.5, 1.5))
 
         self.enc4 = None
+        self.res_out = None
         
     def forward(self, img, mask=None):
         # Mask encoder
@@ -214,6 +217,7 @@ class Generator(torch.nn.Module):
 
         # Resnet blocks
         res = self.resnet_blocks(self.enc4)
+        self.res_out = res
 
         # Decoder
         dec1 = self.deconv1(res + self.enc4)
@@ -243,6 +247,47 @@ class Generator(torch.nn.Module):
             if isinstance(m, ResnetBlock):
                 torch.nn.init.normal_(m.conv.weight, mean, std)
                 torch.nn.init.constant(m.conv.bias, 0)
+
+    def get_partial_pass(self, img, mask):
+        inv_masked_img = torch.cat(((1 - mask) * img, (1 - mask).expand(img.size(0), -1, -1, -1)), 1)
+        imgx = torch.cat((mask * img, mask.expand(img.size(0), -1, -1, -1)), 1)
+        imgx = self.conv1dc(imgx)
+        inv_masked_img = self.conv1dm(inv_masked_img)
+        imgx = self.interpretable_conv_1(imgx)
+        imgx = self.interpretable_conv_2(imgx)
+
+        return imgx, inv_masked_img
+
+    def get_modified_rest_pass(self, original, codes, mask_codes, eigen, mod=3000, ranges=(0, 1)):
+        eigen = torch.from_numpy(eigen).to(self.device)
+        new_codes = codes.clone().T
+        for i in ranges:
+            new_codes += eigen[i:i + 1].T * mod
+
+        new_codes = new_codes.T
+
+        enc1 = self.conv1(self.pad(new_codes))
+        enc2 = self.conv2(enc1)
+        enc3 = self.conv3(enc2)
+        enc4 = self.conv4(enc3)
+        img = self.resnet_blocks(enc4)
+        img = self.deconv1(img + enc4)
+        img = self.deconv2(img + enc3)
+        img = self.deconv3(img + enc2)
+        img = self.deconv4(self.pad(img + enc1))
+        img = self.correction(self.pad1(img))
+        img = self.final(self.pad1(img))
+        img = tanh_correction(img)
+        img = img + mask_codes
+        img = self.guided_blur(img, original)
+        img = self.unsharp_filter(img)
+        return img
+
+    def get_encoded(self):
+        return self.enc4
+
+    def get_resnet_transformed(self):
+        return self.res_out
 
 
 class Discriminator(torch.nn.Module):
