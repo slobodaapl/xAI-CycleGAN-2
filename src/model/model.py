@@ -23,8 +23,6 @@ def joint_bilateral_blur(
     border_type: str = 'reflect',
     color_distance_type: str = 'l1',
 ) -> Tensor:
-    "Single implementation for both Bilateral Filter and Joint Bilateral Filter"
-
     if isinstance(sigma_color, Tensor):
         KORNIA_CHECK_SHAPE(sigma_color, ['B'])
         sigma_color = sigma_color.to(device=inp.device, dtype=inp.dtype).view(-1, 1, 1, 1, 1)
@@ -138,8 +136,6 @@ class ResnetBlock(torch.nn.Module):
 class Generator(torch.nn.Module):
     def __init__(self, num_filter, num_resnet, input_dim=3, output_dim=3):
         super(Generator, self).__init__()
-
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # Mask encoder
         self.conv1dc = ConvBlock(input_dim * 2, input_dim, kernel_size=1, stride=1, padding=0, activation='no_act',
@@ -259,7 +255,6 @@ class Generator(torch.nn.Module):
         return imgx, inv_masked_img
 
     def get_modified_rest_pass(self, original, codes, mask_codes, eigen, mod=3000, ranges=(0, 1)):
-        eigen = torch.from_numpy(eigen).to(self.device)
         new_codes = codes.clone().T
         for i in ranges:
             new_codes += eigen[i:i + 1].T * mod

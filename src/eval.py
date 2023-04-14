@@ -9,7 +9,7 @@ from cv2 import imwrite
 import torch
 
 generator = Generator(32, 8)
-generator.load_state_dict(torch.load('../data/model_checkpoint.pth')['generator_he_to_p63_state_dict'])
+generator.load_state_dict(torch.load('../data/model_checkpoint_best.pth')['generator_he_to_p63_state_dict'])
 generator.eval()
 generator.to('cuda')
 
@@ -32,3 +32,5 @@ with torch.no_grad(), VSIFile('../data/raw/4_HE.vsi') as vsi:
         out_img[curr_y * roi_y:(curr_y + 1) * roi_y, curr_x * roi_x:(curr_x + 1) * roi_x, :] = fake
 
     imwrite('out.png', out_img)
+
+print("Done!")
