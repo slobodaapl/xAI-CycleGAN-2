@@ -353,8 +353,8 @@ class TrainingController:
                 + generator_p63_to_he_total_loss \
                 + cycle_loss \
                 + identity_loss \
-                + context_loss \
-                + cycle_context_loss \
+                #+ context_loss \
+                #+ cycle_context_loss \
 
         self.generator_optimizer.zero_grad(set_to_none=True)
         generator_loss.backward()
