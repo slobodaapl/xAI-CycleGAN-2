@@ -93,13 +93,12 @@ class ConvBlock(torch.nn.Module):
 
 
 class DeconvBlock(torch.nn.Module):
-    def __init__(self, input_size, output_size, kernel_size=3, stride=2, padding=1, output_padding=1, activation='relu', batch_norm=True):
+    def __init__(self, input_size, output_size, kernel_size=3, stride=2, padding=1, output_padding=1, batch_norm=True):
         super(DeconvBlock, self).__init__()
         self.deconv = torch.nn.ConvTranspose2d(input_size, output_size, kernel_size, stride, padding, output_padding)
         self.batch_norm = batch_norm
         self.bn = torch.nn.InstanceNorm2d(output_size)
-        self.activation = activation
-        self.leakyrelu = torch.nn.ELU(A_AB)
+        self.elu = torch.nn.ELU(A_AB)
 
     def forward(self, x):
         if self.batch_norm:
@@ -107,7 +106,7 @@ class DeconvBlock(torch.nn.Module):
         else:
             out = self.deconv(x)
 
-        return self.leakyrelu(out)
+        return self.elu(out)
 
 
 class ResnetBlock(torch.nn.Module):
@@ -116,14 +115,14 @@ class ResnetBlock(torch.nn.Module):
         conv1 = torch.nn.Conv2d(num_filter, num_filter, kernel_size, stride, padding)
         conv2 = torch.nn.Conv2d(num_filter, num_filter, kernel_size, stride, padding)
         bn = torch.nn.InstanceNorm2d(num_filter)
-        relu = torch.nn.GELU()
+        gelu = torch.nn.GELU()
         pad = torch.nn.ReflectionPad2d(1)
 
         self.resnet_block = torch.nn.Sequential(
             pad,
             conv1,
             bn,
-            relu,
+            gelu,
             pad,
             conv2,
             bn
@@ -145,13 +144,6 @@ class Generator(torch.nn.Module):
         
         self.interpretable_conv_1 = ConvBlock(input_dim, num_filter//2, kernel_size=1, stride=1, padding=0)
         self.interpretable_conv_2 = ConvBlock(num_filter//2, num_filter//2, kernel_size=1, stride=1, padding=0)
-
-        self.interpretable_conv_1m = ConvBlock(input_dim, num_filter, kernel_size=1, stride=1, padding=0)
-        self.interpretable_conv_2m = ConvBlock(num_filter, num_filter, kernel_size=1, stride=1, padding=0)
-
-        self.mask_downconv = ConvBlock(num_filter, input_dim, kernel_size=1, stride=1, padding=0)
-
-        self.mask_layer_merge = ConvBlock(input_dim * 2, input_dim, kernel_size=1, stride=1, padding=0)
 
         # Reflection padding
         self.pad = torch.nn.ReflectionPad2d(3)
@@ -289,21 +281,20 @@ class Discriminator(torch.nn.Module):
     def __init__(self, num_filter, input_dim=3, output_dim=1):
         super(Discriminator, self).__init__()
 
-        conv1 = ConvBlock(input_dim, num_filter, kernel_size=4, stride=2, padding=1, activation='lrelu', batch_norm=False)
+        conv1 = ConvBlock(input_dim, num_filter, kernel_size=4, stride=2, padding=1, activation='lrelu',
+                          batch_norm=False)
         conv2 = ConvBlock(num_filter, num_filter * 2, kernel_size=4, stride=2, padding=1, activation='lrelu')
         conv3 = ConvBlock(num_filter * 2, num_filter * 4, kernel_size=4, stride=2, padding=1, activation='lrelu')
         conv4 = ConvBlock(num_filter * 4, num_filter * 8, kernel_size=4, stride=1, padding=1, activation='lrelu')
-        conv5 = ConvBlock(num_filter * 8, num_filter * 8, kernel_size=4, stride=1, padding=1, activation='lrelu')
-        conv6 = ConvBlock(num_filter * 8, num_filter * 8, kernel_size=4, stride=1, padding=1, activation='lrelu')
-        self.conv7 = ConvBlock(num_filter * 8, output_dim, kernel_size=4, stride=1, padding=1, activation='no_act',
-                          batch_norm=False)
+        self.conv5 = ConvBlock(num_filter * 8, output_dim, kernel_size=4, stride=1, padding=1, activation='no_act',
+                               batch_norm=False)
 
         self.conv_blocks = torch.nn.Sequential(
             conv1,
             conv2,
             conv3,
             conv4,
-            self.conv7
+            self.conv5
         )
 
     def forward(self, x):
