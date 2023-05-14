@@ -7,13 +7,16 @@ from kornia.filters.kernels import _unpack_2d_ks, get_gaussian_kernel2d
 from kornia.filters.median import _compute_zero_padding
 from kornia.core import Tensor, pad
 
+# calculated range for LAB values based on custom normalization, used as activation function parameters
+# and for tang correction
 A_AB = -1.72879524581
 B_AB = 1.71528903296
 A_L = -1.68976005407
 B_L = 1.68976005407
 
 
-# This function is from a new versions of Kornia, not my code
+# This function is from a new versions of Kornia that is not yet released and only in C++,
+# so I copied it here and modified it to work with the current version of Kornia in Python
 def joint_bilateral_blur(
     inp: Tensor,
     guidance: Union[Tensor, None],
@@ -57,6 +60,7 @@ def joint_bilateral_blur(
     return out
 
 
+# correct the output of the network to be in the range of LAB values
 def tanh_correction(x: torch.Tensor) -> torch.Tensor:
     x_l = x[:, 0:1, :, :]
     x_ab = x[:, 1:, :, :]
@@ -301,12 +305,13 @@ class Discriminator(torch.nn.Module):
         out = self.conv_blocks(x)
         return out
 
-    def loss_fake(self, x):
+    def loss_fake(self, x):  # a modified forward pass compatible with captum explanations
         out = self.forward(x)
         out = torch.nn.functional.adaptive_max_pool2d(out, output_size=1).squeeze(0).squeeze(0)
         return out
 
-    def normal_weight_init(self, mean=0.0, std=0.02):
+    # deprecated
+    def normal_weight_init(self, mean=0.0, std=0.02):  # switched to default pytorch init
         for m in self.children():
             if isinstance(m, ConvBlock):
                 torch.nn.init.normal(m.conv.weight, mean, std)

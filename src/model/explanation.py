@@ -7,6 +7,7 @@ from captum.attr import Saliency
 from torch import cat, ones
 
 
+# available explanation ramps based on name. The value is the exponent applied to the lambda function
 class Ramp(Enum):
     linear = 1
     fast_start = 0.5
@@ -66,6 +67,7 @@ class ExplanationController:
     def get_coefficient_mask(self, loss):
         return self.loss_coefficient_function(loss) ** self.slope_coefficient
 
+    # generate the explanation map based on the current losses, as described in the paper
     def get_explanation(self):
         self.explain_map = self.explanation * (1 - self.mask_lambda) \
                            * self.loss_coefficient_function(self.discriminator_loss) ** self.slope_coefficient \
@@ -82,6 +84,7 @@ class ExplanationController:
         self.discriminator_loss = loss_disc
         self.discriminator_mask_loss = loss_disc_m
 
+    # add a hook to the backprop pass, where the explanation map is applied to the gradient in the last layer of the gen
     def explanation_hook(self, module, grad_input, grad_output):
         del module, grad_output
         out = grad_input[0] + grad_input[0] * self.explain_map

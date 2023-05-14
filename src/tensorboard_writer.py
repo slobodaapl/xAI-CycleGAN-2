@@ -2,6 +2,8 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import torch
 
+# this is used to write the tensorboard embedding, which is used to visualize the latent space via tsne
+
 images = np.load('../data/tf_images.npy')
 codes = np.load('../data/pca_results.npy')
 

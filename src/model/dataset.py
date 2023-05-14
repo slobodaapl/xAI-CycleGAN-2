@@ -66,6 +66,7 @@ class DefaultTransform:
         ])
 
 
+# Not my code, but I'm using it for the dataset
 class DatasetFromFolder(data.Dataset):
     def __init__(
             self,

@@ -9,10 +9,12 @@ from enum import Enum
 from functools import partial
 
 
+# obtain a noise mask with given mean and std
 def get_mask_noise(image, mean=1.0, std=0.02):  # A simple noise mask, with mean and std as parameters
     return torch.normal(torch.full(image.shape, mean), std).cuda()
 
 
+# obtain a entropy mask with given disk size
 def get_mask_entropy(image, disk_size=9):  # A simple entropy mask, with disk size as parameter
     # check if image is tensor, if yes convert to numpy, else leave as is
     if type(image) is torch.Tensor:
@@ -40,6 +42,7 @@ def get_mask_entropy(image, disk_size=9):  # A simple entropy mask, with disk si
         raise exception
 
 
+# obtain a rectangular binary mask with given ratio of coverage
 def get_mask_rec_binary(image, ratio=0.9):  # A simple rectangular binary mask, with ratio controlling the region size
     if type(image) is np.ndarray:
         binary_rec_mask = np.zeros((image.shape[2], image.shape[0], image.shape[1]))
@@ -59,12 +62,14 @@ def get_mask_rec_binary(image, ratio=0.9):  # A simple rectangular binary mask, 
     return torch.tensor(binary_rec_mask, dtype=torch.float32)
 
 
+# enum of mask types
 class MaskType(Enum):
     binary_rec = partial(get_mask_rec_binary)
     entropy = partial(get_mask_entropy)
     noise = partial(get_mask_noise)
 
 
+# get mask of specified type
 def get_mask(image, mask_type: Literal['binary_rec', 'entropy', 'noise'], options: dict = None):
     """
     This function returns a mask of the specified type.

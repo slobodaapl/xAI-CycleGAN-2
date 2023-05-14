@@ -2,6 +2,7 @@ from setup.logging_utils import RunningMeanStackFast
 from torch import Tensor
 
 
+# Never used, was an experiment to track ratios of brown cell containing images to non-brown cell containing images
 class HistoDataTracker:
 
     def __init__(self, size_max=500, margin=0.05):

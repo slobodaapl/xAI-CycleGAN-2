@@ -1,9 +1,9 @@
 captum
 scikit-image
-kornia
-numpy
+kornia==0.6.10
+numpy==1.23.5
 torch
 torchvision
-Pillow
-wandb
-streamlit
+Pillow==9.4.0
+wandb==0.14.0
+streamlit==1.20.0

@@ -2,7 +2,9 @@ from torch import Tensor
 import kornia
 
 
-class RunningMeanStackFast(list): # Use only if max_length >= 3000 or .mean often, otherwise use RunningMeanStack cause it's faster.
+# Use only if max_length >= 3000 or .mean often, otherwise use RunningMeanStack
+# This implementation is faster than RunningMeanStack for large max_length
+class RunningMeanStackFast(list):
 
     def __init__(self, max_length):
         super().__init__()
@@ -52,6 +54,7 @@ class RunningMeanStackFast(list): # Use only if max_length >= 3000 or .mean ofte
         return self[0]
 
 
+# running mean for max_length samples using FIFO stack
 class RunningMeanStack(list):
 
     def __init__(self, max_length):
@@ -79,6 +82,7 @@ class RunningMeanStack(list):
         return self[0]
 
 
+# return image to normal rgb appearance and value range
 def normalize_image(img):
     img = img.cpu().detach()
 

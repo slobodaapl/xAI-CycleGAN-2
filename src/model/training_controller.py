@@ -158,9 +158,11 @@ class TrainingController:
         self.fake_p63_pool = ImagePool(pool_size)
         # endregion
 
+    # general function to get loss based on chosen criterion
     def get_loss(self, tensor: torch.Tensor, loss_function: Callable, target_function: Callable) -> torch.Tensor:
         return loss_function(tensor, Variable(target_function(tensor.size()).to(self.device)))
-    
+
+    # get total loss for mask discriminator
     def get_total_mask_disc_loss(self, real: torch.Tensor, mask: torch.Tensor,
                                  fake: torch.Tensor, discriminator_mask: Discriminator) -> torch.Tensor:
 
@@ -174,6 +176,7 @@ class TrainingController:
 
         return discriminator_mask_real_loss + discriminator_mask_fake_loss
 
+    # get total loss for given generator and discriminator pair, and prepare explainer
     def get_total_gen_loss_and_prep_explainer(self, real: torch.Tensor, mask: torch.Tensor,
                                               generator: Generator,
                                               discriminator: Discriminator,
@@ -192,6 +195,7 @@ class TrainingController:
                 + (1 - self.settings.lambda_mask_adversarial_ratio)
                 * generator_loss) * self.settings.lambda_adversarial
 
+    # get total loss for cycle consistency
     def get_total_cycle_loss(self, cycled: torch.Tensor, other_mask: torch.Tensor,
                              other_mask_inverted: torch.Tensor, other_real: torch.Tensor) -> torch.Tensor:
 
@@ -203,6 +207,7 @@ class TrainingController:
 
         return pixel_wise_cycle_loss + pixel_wise_cycle_loss_inv
 
+    # get partial discriminartor loss
     def get_partial_disc_loss(self, real: torch.Tensor, fake: torch.Tensor,
                               discriminator: Discriminator,
                               coefficient: float,
@@ -219,6 +224,7 @@ class TrainingController:
 
         return (discriminator_real_loss + discriminator_fake_loss) * 0.5 * coefficient
 
+    # training step
     def training_step(self, real_he: torch.Tensor, real_p63: torch.Tensor):
         min_dim = min(real_he.size(0), real_p63.size(0))
         real_he = real_he[:min_dim]
@@ -231,7 +237,8 @@ class TrainingController:
         real_p63 = Variable(real_p63.to(self.device))
         mask_he = Variable(mask_he.to(self.device))
         mask_p63 = Variable(mask_p63.to(self.device))
-        
+
+        # cast to bfloat16 for forward pass, it's faster
         with torch.autocast(device_type="cuda"):
             fake_p63 = self.generator_he_to_p63(real_he, mask_he)
 
@@ -249,9 +256,11 @@ class TrainingController:
 
             encoded_fhe_in_he_to_p63 = self.generator_he_to_p63.enc4
 
+            # set explanations
             self.p63_explainer.set_explanation_m(fake_p63 * mask_he)
             self.he_explainer.set_explanation_m(fake_he * mask_p63)
 
+            # using no grad here due to doubling gradients... explainer automatically resets gradients
             with torch.no_grad():
                 discriminator_he_mask_loss = \
                     self.get_total_mask_disc_loss(real_he, mask_he, fake_he, self.discriminator_he_mask) * 0.5
@@ -315,6 +324,7 @@ class TrainingController:
             cycle_context_loss /= 2
             cycle_context_loss *= self.settings.lambda_cycle_context
 
+            # using no grad here due to doubling gradients... explainer automatically resets gradients
             with torch.no_grad():
                 discriminator_he_loss_partial = self.get_partial_disc_loss(real_he, fake_he,
                                                                            self.discriminator_he,
@@ -360,7 +370,7 @@ class TrainingController:
         generator_loss.backward()
         self.generator_optimizer.step()
 
-        # Back propagation
+        # Back propagation for discriminators
         with torch.autocast(device_type="cuda"):
             discriminator_he_loss_partial = self.get_partial_disc_loss(real_he, fake_he, self.discriminator_he,
                                                                        1 - self.settings.lambda_mask_adversarial_ratio,
@@ -395,6 +405,7 @@ class TrainingController:
         discriminator_p63_loss.backward()
         self.discriminator_p63_optimizer.step()
 
+        # logging losses
         self.latest_generator_loss = generator_loss.item()
         self.latest_discriminator_he_loss = discriminator_he_loss.item()
         self.latest_discriminator_p63_loss = discriminator_p63_loss.item()
@@ -413,6 +424,7 @@ class TrainingController:
         self.wandb_module.context_running_loss_avg.append(context_loss.item())
         self.wandb_module.cycle_context_running_loss_avg.append(cycle_context_loss.item())
 
+    # evaluation step
     def get_image_pairs(self):
         real_he = self.test_he_data.get_random_image()
         real_p63 = self.test_p63_data.get_random_image()

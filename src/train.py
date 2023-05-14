@@ -17,6 +17,7 @@ data_dir = settings.data_root
 model_dir = settings.model_root
 log_dir = settings.log_dir
 
+# Create directories if they don't exist
 os.mkdir(log_dir) if not os.path.exists(log_dir) else None
 os.mkdir(model_dir) if not os.path.exists(model_dir) else None
 model_dir = os.path.join(model_dir, f'{settings.name}')
@@ -24,6 +25,7 @@ os.mkdir(model_dir) if not os.path.exists(model_dir) else None
 
 model_file = os.path.join(model_dir, f'model_checkpoint.pth')
 
+# Check if model dir exists
 if os.path.exists(model_dir):
     print("Model directory: ", model_dir)
     print("Model checkpoint file: ", model_file)
@@ -31,28 +33,21 @@ else:
     exit(1)
 
 model_step = 0
-    
-#tracker = HistoDataTracker()
-#data_step = 0
 
 for epoch in range(settings.epochs):
+    # Iterate over the dataset
     for step, (real_he, real_p63) in enumerate(zip(training_controller.train_he, training_controller.train_p63)):
-        
-        #if not tracker.check_image(real_p63):
-        #    continue
-        
-        #data_step += 1
+
+        # Train the model one step
         training_controller.training_step(real_he, real_p63)
 
-        if step % settings.log_frequency == 0:  # step to data_step when needed
+        if step % settings.log_frequency == 0: # Log every n steps
             wandb_module.log(epoch)
             wandb_module.log_image(*training_controller.get_image_pairs())
             wandb_module.step += 1
 
             print(f'Epoch: {epoch+1}/{settings.epochs}\n'
                   f'Step: {step}/{step_max}\n'
-                  #f'Data Step: {data_step}\n'
-                  #f'Current Class Ratio: {tracker.ratio.mean}\n'
                   f'Generator Loss: {training_controller.latest_generator_loss}\n'
                   f'Discriminator H&E Loss: {training_controller.latest_discriminator_he_loss}\n'
                   f'Discriminator P63 Loss: {training_controller.latest_discriminator_p63_loss}\n'
@@ -61,8 +56,8 @@ for epoch in range(settings.epochs):
                   f'Context Loss {training_controller.latest_context_loss}\n'
                   f'Cycle Context Loss: {training_controller.latest_cycle_context_loss}\n'
                   )
-                  #f'SSIM Loss: {training_controller.latest_ssim_loss}\n')
 
+            # Save model checkpoint
             if wandb_module.step % settings.checkpoint_frequency_steps == 0:
                 torch.save({
                     'epoch': epoch,
@@ -81,5 +76,3 @@ for epoch in range(settings.epochs):
                     'discriminator_p63_loss': training_controller.latest_discriminator_p63_loss,
                 }, f=os.path.join(model_dir, f'model_checkpoint_{model_step}.pth'))
                 model_step += 1
-
-                # wandb_module.log_model(model_file)
