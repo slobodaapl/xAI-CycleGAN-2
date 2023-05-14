@@ -15,7 +15,7 @@ else:
     device = torch.device('cpu')
 
 gen = Generator(32, 8)
-model_dict = torch.load('../data/model_checkpoint_best_fixed.pth')
+model_dict = torch.load('../data/model_checkpoint_best.pth')
 gen.load_state_dict(model_dict['generator_he_to_p63_state_dict'])
 gen = gen.to(device)
 gen.eval()
