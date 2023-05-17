@@ -120,4 +120,7 @@ def test():
     _ = run_model(img, (5, 10), 0)
 
 
+if __name__ == '__main__':
+    main()
+
 # This file is run by using the command: streamlit run src\streamlit_app.py
