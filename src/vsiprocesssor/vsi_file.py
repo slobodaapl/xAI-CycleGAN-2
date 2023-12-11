@@ -4,6 +4,7 @@ import bioformats
 import atexit
 from tqdm import tqdm
 from cv2 import resize
+import os
 
 
 def exit_handler():
@@ -60,6 +61,7 @@ class VSIFile:
         """
 
         self.file_path = vsi_file
+        self.vsi_name = os.path.splitext(os.path.basename(vsi_file))[0]
         self.idx = 0
         self.roi_size = roi_size
         self.target_size = target_size
@@ -120,7 +122,7 @@ class VSIFile:
         if self.pbar is not None:
             self.pbar.update(1)
 
-        return roi
+        return roi, x, y
 
     def _open_slide(self, perform_init: bool = True):
         self.slide = bioformats.ImageReader(self.file_path, perform_init=perform_init)
