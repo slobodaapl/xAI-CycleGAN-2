@@ -95,7 +95,7 @@ if __name__ == '__main__':
                 # counter = 0
                 for (patch, x, y) in vsi:
                     if vsi_has_sufficient_information(patch):
-                        cv2.imwrite(os.path.join(train_he_dir, f'{vsi.vsi_name}_{x}_{y}.png'), patch)
+                        cv2.imwrite(os.path.join(stain_dir, f'{vsi.vsi_name}_{x}_{y}.png'), patch)
                         # counter += 1
                 # if counter == 100:
                 #     break
