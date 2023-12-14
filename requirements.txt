@@ -1,5 +1,6 @@
 captum
 scikit-image
+scikit-learn
 kornia==0.6.10
 numpy==1.23.5
 torch
@@ -7,3 +8,6 @@ torchvision
 Pillow==9.4.0
 wandb==0.14.0
 streamlit==1.20.0
+javabridge
+python-bioformats
+tqdm

@@ -22,7 +22,7 @@ with torch.no_grad(), VSIFile('../data/raw/4_HE.vsi') as vsi:
     roi_y = vsi.target_size[0]
     roi_x = vsi.target_size[1]
 
-    for roi in vsi:
+    for (roi, x, y) in vsi:
         img = tf(roi).expand(1, -1, -1, -1).cuda()
         mask = get_mask_noise(img)
         fake = generator(img, mask)
